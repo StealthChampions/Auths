@@ -24,7 +24,7 @@ export type AccountsAction =
   | { type: 'pinEntry'; payload: string }
   | { type: 'deleteCode'; payload: string }
   | { type: 'addCode'; payload: any }
-  | { type: 'updateEntry'; payload: { hash: string; issuer?: string; account?: string; period?: number; digits?: number } };
+  | { type: 'updateEntry'; payload: { hash: string; issuer?: string; account?: string; folder?: string; period?: number; digits?: number } };
 
 const initialState: AccountsState = {
   entries: [],
@@ -46,65 +46,65 @@ export function accountsReducer(state = initialState, action: AccountsAction): A
           code: generateOTPCode(entry) // This would be implemented
         }))
       };
-    
+
     case 'setEntries':
       return {
         ...state,
         entries: action.payload
       };
-    
+
     case 'setFilter':
       return {
         ...state,
         filter: action.payload
       };
-    
+
     case 'showSearch':
       return {
         ...state,
         showSearch: true
       };
-    
+
     case 'hideSearch':
       return {
         ...state,
         showSearch: false
       };
-    
+
     case 'stopFilter':
       return {
         ...state,
         filter: ''
       };
-    
+
     case 'initComplete':
       return {
         ...state,
         initComplete: true
       };
-    
+
     case 'setShouldShowPassphrase':
       return {
         ...state,
         shouldShowPassphrase: action.payload
       };
-    
+
     case 'setDefaultEncryption':
       return {
         ...state,
         defaultEncryption: action.payload
       };
-    
+
     case 'setEncryption':
       return {
         ...state,
         encryption: action.payload
       };
-    
+
     case 'showNotification':
       // This would typically be handled by the notification reducer
       return state;
-    
+
     case 'pinEntry':
       const pinnedEntries = state.entries.map(entry =>
         entry.hash === action.payload
@@ -146,12 +146,13 @@ export function accountsReducer(state = initialState, action: AccountsAction): A
       const updatedEntries = state.entries.map(entry =>
         entry.hash === action.payload.hash
           ? {
-              ...entry,
-              issuer: action.payload.issuer !== undefined ? action.payload.issuer : entry.issuer,
-              account: action.payload.account !== undefined ? action.payload.account : entry.account,
-              period: action.payload.period !== undefined ? action.payload.period : entry.period,
-              digits: action.payload.digits !== undefined ? action.payload.digits : entry.digits,
-            }
+            ...entry,
+            issuer: action.payload.issuer !== undefined ? action.payload.issuer : entry.issuer,
+            account: action.payload.account !== undefined ? action.payload.account : entry.account,
+            folder: action.payload.folder !== undefined ? action.payload.folder : entry.folder,
+            period: action.payload.period !== undefined ? action.payload.period : entry.period,
+            digits: action.payload.digits !== undefined ? action.payload.digits : entry.digits,
+          }
           : entry
       );
       saveEntriesToStorage(updatedEntries);

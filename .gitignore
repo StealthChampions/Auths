@@ -44,6 +44,7 @@ lerna-debug.log*
 .idea/
 .vscode/
 .claude/
+CLAUDE.md
 *.suo
 *.ntvs*
 *.njsproj
@@ -64,3 +65,9 @@ lerna-debug.log*
 *.temp
 .cache/
 .parcel-cache/
+
+# Implementation details & Feature lists
+FEATURES.md
+FEATURES_zh.md
+PROJECT_PLAN.md
+PROJECT_PLAN_zh.md

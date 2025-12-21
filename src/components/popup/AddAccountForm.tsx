@@ -5,7 +5,7 @@ import { useI18n } from '../../i18n';
 // SVG Icons
 const CloseIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M6 6L18 18M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M6 6L18 18M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
   </svg>
 );
 
@@ -16,6 +16,7 @@ interface AddAccountFormProps {
 export default function AddAccountForm({ onClose }: AddAccountFormProps) {
   const [issuer, setIssuer] = useState('');
   const [account, setAccount] = useState('');
+  const [folder, setFolder] = useState('');
   const [secret, setSecret] = useState('');
   const [period, setPeriod] = useState(30);
   const [digits, setDigits] = useState(6);
@@ -51,6 +52,7 @@ export default function AddAccountForm({ onClose }: AddAccountFormProps) {
       payload: {
         issuer: issuer.trim(),
         account: account.trim() || '',
+        folder: folder.trim() || '',
         secret: secret.trim().toUpperCase(),
         type: 1, // TOTP
         period,
@@ -92,6 +94,17 @@ export default function AddAccountForm({ onClose }: AddAccountFormProps) {
             value={account}
             onChange={(e) => setAccount(e.target.value)}
             placeholder={t('username_placeholder')}
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="folder">{t('folder')} ({t('optional')})</label>
+          <input
+            type="text"
+            id="folder"
+            value={folder}
+            onChange={(e) => setFolder(e.target.value)}
+            placeholder={t('folder_placeholder') || 'e.g. Work, Financial'}
           />
         </div>
 

@@ -34,6 +34,63 @@ const EditIcon = () => (
   </svg>
 );
 
+const ServiceIcon = ({ issuer, account, icon }: { issuer: string; account: string; icon?: string }) => {
+  const [error, setError] = useState(false);
+
+  if (icon) {
+    return <img src={icon} alt={issuer} className="service-icon" onError={() => setError(true)} />;
+  }
+
+  const getIconUrl = (issuer: string) => {
+    const domainMap: Record<string, string> = {
+      'google': 'google.com',
+      'github': 'github.com',
+      'facebook': 'facebook.com',
+      'twitter': 'twitter.com',
+      'discord': 'discord.com',
+      'microsoft': 'microsoft.com',
+      'amazon': 'amazon.com',
+      'apple': 'apple.com',
+      'binance': 'binance.com',
+      'coinbase': 'coinbase.com',
+      'dropbox': 'dropbox.com',
+      'slack': 'slack.com',
+      'telegram': 'telegram.org',
+      'kraken': 'kraken.com',
+      'epic': 'epicgames.com',
+      'steam': 'steampowered.com',
+      'ubisoft': 'ubisoft.com',
+      'ea': 'ea.com',
+      'blizzard': 'blizzard.com',
+      'battle.net': 'battle.net',
+      'proton': 'proton.me',
+      'outlook': 'outlook.com',
+      'adobe': 'adobe.com'
+    };
+
+    const lowerIssuer = (issuer || '').toLowerCase();
+    for (const [key, domain] of Object.entries(domainMap)) {
+      if (lowerIssuer.includes(key)) return domain;
+    }
+    return null;
+  };
+
+  const domain = getIconUrl(issuer);
+  if (domain && !error) {
+    return (
+      <img
+        src={`https://www.google.com/s2/favicons?sz=64&domain=${domain}`}
+        alt={issuer}
+        className="service-icon"
+        onError={() => setError(true)}
+      />
+    );
+  }
+
+  const initial = (issuer || account || '?').charAt(0).toUpperCase();
+  return <div className="service-icon-placeholder">{initial}</div>;
+};
+
 // Use OTPEntryInterface from global declarations
 declare global {
   interface OTPEntryInterface {
@@ -47,6 +104,9 @@ declare global {
     counter: number;
     digits: number;
     secret: string | null;
+    algorithm: number;
+    icon?: string;
+    folder?: string;
   }
 }
 
@@ -122,10 +182,13 @@ export default function EntryComponent({
     generateCode();
 
     // Update code every second for TOTP
+    let interval: NodeJS.Timeout | null = null;
     if (entry.type === 1) {
-      const interval = setInterval(generateCode, 1000);
-      return () => clearInterval(interval);
+      interval = setInterval(generateCode, 1000);
     }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [entry.secret, entry.period, entry.digits, entry.type, entry.algorithm, entry.counter]);
 
   // Update progress and time left
@@ -199,6 +262,9 @@ export default function EntryComponent({
       aria-label={`Copy code for ${entry.issuer}`}
     >
       <div className="entry-header">
+        <div className="entry-brand">
+          <ServiceIcon issuer={entry.issuer} account={entry.account} icon={entry.icon} />
+        </div>
         <div className="entry-info-top">
           <span className="issuer">
             {entry.pinned && <span className="pin-badge">★</span>}

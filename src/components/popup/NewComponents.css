@@ -122,6 +122,120 @@
   background: #e8e8e8;
 }
 
+/* Entry Brand & Icon Styles */
+.entry-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.entry-brand {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.service-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.service-icon-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  background: var(--color-primary-light, #dbeafe);
+  color: var(--color-primary, #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  text-transform: uppercase;
+}
+
+.theme-dark .service-icon-placeholder {
+  background: rgba(37, 99, 235, 0.2);
+  color: #60a5fa;
+}
+
+.entry-info-top {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Folder Tabs Styles */
+.folder-tabs-container {
+  padding: 8px 16px;
+  background: var(--bg-secondary, #f8f9fa);
+  border-bottom: 1px solid var(--border-color, #eee);
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.folder-tabs-container::-webkit-scrollbar {
+  display: none;
+  /* Chrome/Safari */
+}
+
+.folder-tabs {
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.folder-tab {
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color, #ddd);
+  background: var(--bg-primary, #fff);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #666;
+}
+
+.folder-tab:hover {
+  background: var(--color-primary-light, #f0f7ff);
+  border-color: var(--color-primary, #2563eb);
+}
+
+.folder-tab.active {
+  background: var(--color-primary, #2563eb);
+  color: white;
+  border-color: var(--color-primary, #2563eb);
+}
+
+.theme-dark .folder-tabs-container {
+  background: #1a1a1a;
+  border-bottom-color: #333;
+}
+
+.theme-dark .folder-tab {
+  background: #2a2a2a;
+  border-color: #444;
+  color: #aaa;
+}
+
+.theme-dark .folder-tab:hover {
+  background: #333;
+}
+
+.theme-dark .folder-tab.active {
+  background: var(--color-primary, #2563eb);
+  color: white;
+}
+
 /* QR Scanner Styles */
 .qr-scanner-modal {
   background: white;

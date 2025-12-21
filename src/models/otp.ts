@@ -59,6 +59,8 @@ export class OTPEntry implements OTPEntryInterface {
   digits: number;
   algorithm: OTPAlgorithm;
   pinned: boolean;
+  icon?: string;
+  folder?: string;
   encryption?: EncryptionInterface;
   encData?: string;
   encSecret?: string;
@@ -68,26 +70,28 @@ export class OTPEntry implements OTPEntryInterface {
   constructor(
     entry:
       | {
-          account?: string;
-          encrypted: boolean;
-          index: number;
-          issuer?: string;
-          secret: string;
-          type: OTPType;
-          counter?: number;
-          period?: number;
-          hash?: string;
-          digits?: number;
-          algorithm?: OTPAlgorithm;
-          pinned?: boolean;
-        }
+        account?: string;
+        encrypted: boolean;
+        index: number;
+        issuer?: string;
+        secret: string;
+        type: OTPType;
+        counter?: number;
+        period?: number;
+        hash?: string;
+        digits?: number;
+        algorithm?: OTPAlgorithm;
+        pinned?: boolean;
+        icon?: string;
+        folder?: string;
+      }
       | {
-          encrypted: true;
-          keyId: string;
-          encData: string;
-          hash: string;
-          index: number;
-        },
+        encrypted: true;
+        keyId: string;
+        encData: string;
+        hash: string;
+        index: number;
+      },
     encryption?: EncryptionInterface
   ) {
     this.encryption = encryption;
@@ -152,6 +156,12 @@ export class OTPEntry implements OTPEntryInterface {
       this.pinned = entry.pinned;
     } else {
       this.pinned = false;
+    }
+    if ('icon' in entry && entry.icon) {
+      this.icon = entry.icon;
+    }
+    if ('folder' in entry && entry.folder) {
+      this.folder = entry.folder;
     }
     if (this.type === OTPType.totp && entry.period) {
       this.period = entry.period;
@@ -222,6 +232,8 @@ export class OTPEntry implements OTPEntryInterface {
     this.issuer = decryptedData.issuer || "";
     this.period = decryptedData.period || 30;
     this.pinned = decryptedData.pinned || false;
+    this.icon = decryptedData.icon;
+    this.folder = decryptedData.folder;
     this.secret = decryptedData.secret;
     // @ts-expect-error need a better way to do this
     this.type = OTPType[decryptedData.type] || OTPType.totp;

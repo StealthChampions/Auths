@@ -5,7 +5,7 @@ import { useI18n } from '../../i18n';
 // SVG Icons
 const CloseIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M6 6L18 18M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M6 6L18 18M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
   </svg>
 );
 
@@ -20,7 +20,9 @@ interface OTPEntryInterface {
   counter: number;
   digits: number;
   secret: string | null;
-  algorithm?: number;
+  algorithm: number;
+  icon?: string;
+  folder?: string;
 }
 
 interface EditAccountModalProps {
@@ -32,6 +34,7 @@ interface EditAccountModalProps {
 export default function EditAccountModal({ entry, onClose, onSave }: EditAccountModalProps) {
   const [issuer, setIssuer] = useState(entry.issuer || '');
   const [account, setAccount] = useState(entry.account || '');
+  const [folder, setFolder] = useState(entry.folder || '');
   const [period, setPeriod] = useState(entry.period || 30);
   const [digits, setDigits] = useState(entry.digits || 6);
   const [error, setError] = useState('');
@@ -56,6 +59,7 @@ export default function EditAccountModal({ entry, onClose, onSave }: EditAccount
         hash: entry.hash,
         issuer: issuer.trim(),
         account: account.trim() || '',
+        folder: folder.trim() || '',
         period,
         digits,
       }
@@ -95,6 +99,17 @@ export default function EditAccountModal({ entry, onClose, onSave }: EditAccount
             value={account}
             onChange={(e) => setAccount(e.target.value)}
             placeholder={t('username_placeholder')}
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="edit-folder">{t('folder')} ({t('optional')})</label>
+          <input
+            type="text"
+            id="edit-folder"
+            value={folder}
+            onChange={(e) => setFolder(e.target.value)}
+            placeholder={t('folder_placeholder') || 'e.g. Work, Financial'}
           />
         </div>
 

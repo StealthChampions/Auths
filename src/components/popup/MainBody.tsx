@@ -50,6 +50,9 @@ declare global {
     counter: number;
     digits: number;
     secret: string | null;
+    algorithm: number;
+    icon?: string;
+    folder?: string;
   }
 }
 
@@ -59,6 +62,7 @@ export default function MainBody() {
   const { dispatch: notificationDispatch } = useNotification();
   const { t } = useI18n();
   const [searchText, setSearchText] = useState('');
+  const [selectedFolder, setSelectedFolder] = useState<string>('all');
   const [showMethodSelector, setShowMethodSelector] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
@@ -70,14 +74,26 @@ export default function MainBody() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const filteredEntries = entries?.filter((entry: OTPEntryInterface) => {
-    if (searchText === '') return true;
-    const search = searchText.toLowerCase();
-    const issuer = (entry.issuer || '').toLowerCase();
-    const account = (entry.account || '').toLowerCase();
-    const matches = issuer.includes(search) || account.includes(search);
-    console.log('[Filter] searchText:', searchText, 'issuer:', issuer, 'account:', account, 'matches:', matches);
-    return matches;
+    // First apply search filter
+    const matchesSearch = () => {
+      if (searchText === '') return true;
+      const search = searchText.toLowerCase();
+      const issuer = (entry.issuer || '').toLowerCase();
+      const account = (entry.account || '').toLowerCase();
+      return issuer.includes(search) || account.includes(search);
+    };
+
+    // Then apply folder filter
+    const matchesFolder = () => {
+      if (selectedFolder === 'all') return true;
+      if (selectedFolder === 'uncategorized') return !entry.folder;
+      return entry.folder === selectedFolder;
+    };
+
+    return matchesSearch() && matchesFolder();
   }) || [];
+
+  const folders = Array.from(new Set(entries?.map((e: OTPEntryInterface) => e.folder).filter(Boolean))) as string[];
 
   console.log('[MainBody] entries:', entries?.length, 'filteredEntries:', filteredEntries.length, 'searchText:', searchText);
 
@@ -345,6 +361,37 @@ export default function MainBody() {
           )}
         </div>
       </div>
+
+      {/* Folder Tabs */}
+      {entries && entries.length > 0 && (
+        <div className="folder-tabs-container">
+          <div className="folder-tabs">
+            <button
+              className={`folder-tab ${selectedFolder === 'all' ? 'active' : ''}`}
+              onClick={() => setSelectedFolder('all')}
+            >
+              {t('all_accounts')}
+            </button>
+            {folders.map(folder => (
+              <button
+                key={folder}
+                className={`folder-tab ${selectedFolder === folder ? 'active' : ''}`}
+                onClick={() => setSelectedFolder(folder)}
+              >
+                {folder}
+              </button>
+            ))}
+            {entries.some((e: OTPEntryInterface) => !e.folder) && folders.length > 0 && (
+              <button
+                className={`folder-tab ${selectedFolder === 'uncategorized' ? 'active' : ''}`}
+                onClick={() => setSelectedFolder('uncategorized')}
+              >
+                {t('uncategorized')}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
 
 
