@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #9CA3AF;
+  background: var(--color-primary);
   padding: 20px;
 }
 

@@ -65,8 +65,8 @@
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #9CA3AF;
-  box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.15);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
 .form-row {
@@ -104,12 +104,12 @@
 }
 
 .btn-primary {
-  background: #9CA3AF;
+  background: var(--color-primary);
   color: white;
 }
 
 .btn-primary:hover {
-  background: #6B7280;
+  background: var(--color-primary-hover);
 }
 
 .btn-secondary {
