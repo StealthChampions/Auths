@@ -4,8 +4,8 @@ import { useI18n } from '../../i18n';
 // SVG Icons
 const ShieldIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" fill="currentColor"/>
-    <path d="M9 12L11 14L15 10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M12 2L20 5V12C20 18 12 22 12 22C12 22 4 18 4 12V5L12 2Z" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinejoin="round"/>
+    <text x="12" y="15" fontSize="10" fontWeight="700" fill="currentColor" textAnchor="middle">2</text>
   </svg>
 );
 

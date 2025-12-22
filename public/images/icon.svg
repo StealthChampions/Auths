@@ -1,13 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <!-- 背景 -->
-  <rect width="512" height="512" rx="112" fill="#6366F1"/>
+  <rect width="512" height="512" rx="112" fill="#9CA3AF"/>
 
   <!-- 盾牌 -->
-  <path d="M256 96 L384 144 L384 272 C384 352 320 416 256 432 C192 416 128 352 128 272 L128 144 Z"
-        stroke="#FFFFFF" stroke-width="32" fill="none" stroke-linejoin="round"/>
+  <path d="M256 80 L400 136 L400 280 C400 368 328 440 256 456 C184 440 112 368 112 280 L112 136 Z"
+        stroke="#FFFFFF" stroke-width="28" fill="none" stroke-linejoin="round"/>
 
-  <!-- 对勾 -->
-  <polyline points="192,256 240,304 320,208"
-            stroke="#FFFFFF" stroke-width="32" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 数字 2 -->
+  <text x="256" y="320"
+        font-family="SF Pro Display, -apple-system, Arial, sans-serif"
+        font-size="200"
+        font-weight="700"
+        fill="#FFFFFF"
+        text-anchor="middle">2</text>
 </svg>
