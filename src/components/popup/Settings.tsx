@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useMenu } from '../../store';
 import { useI18n } from '../../i18n';
-import { UserSettings } from '../../models/settings';
+import { SecureHash } from '../../models/encryption';
 import ImportExport from './ImportExport';
 import PasswordSetup from './PasswordSetup';
-import CloudBackup from './CloudBackup';
 import WebDAV from './WebDAV';
 import './NewComponents.css';
 
@@ -52,7 +51,6 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   const { t } = useI18n();
   const [showImportExport, setShowImportExport] = useState(false);
   const [showPasswordSetup, setShowPasswordSetup] = useState(false);
-  const [showCloudBackup, setShowCloudBackup] = useState(false);
   const [showWebDAV, setShowWebDAV] = useState(false);
   const [hasPassword, setHasPassword] = useState(false);
   const [activeSection, setActiveSection] = useState<'general' | 'security' | 'backup' | 'about'>('general');
@@ -98,18 +96,26 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     }
   };
 
+  /**
+   * 安全地设置主密码
+   * 使用 PBKDF2 进行密码哈希，不存储明文密码
+   */
   const handleSetPassword = async (password: string) => {
     try {
-      const passwordHash = btoa(password);
+      // 使用 SecureHash 进行密码哈希 (PBKDF2 with 100000 iterations)
+      const passwordHash = SecureHash.hashPassword(password);
+
       await chrome.storage.local.set({
-        passwordHash,
+        passwordHash,      // 格式: salt:hash
         hasPassword: true,
-        isLocked: false
+        isLocked: false,
+        // 存储密码设置时间，用于安全审计
+        passwordSetAt: Date.now()
       });
+
       setHasPassword(true);
       setShowPasswordSetup(false);
-    } catch (err) {
-      console.error('Failed to set password:', err);
+    } catch {
       alert(t('password_setup_failed'));
     }
   };
@@ -136,7 +142,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
           <button
             key={item.id}
             className={`nav-item ${activeSection === item.id ? 'active' : ''}`}
-            onClick={() => setActiveSection(item.id as any)}
+            onClick={() => setActiveSection(item.id as typeof activeSection)}
           >
             {item.icon}
             <span>{item.label}</span>
@@ -191,20 +197,6 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
               <label>
                 <input
                   type="checkbox"
-                  checked={menu.autofill || false}
-                  onChange={(e) => dispatch({ type: 'setAutofill', payload: e.target.checked })}
-                />
-                <span>{t('enable_autofill')}</span>
-              </label>
-              <p className="setting-description">
-                {t('autofill_description')}
-              </p>
-            </div>
-
-            <div className="setting-item">
-              <label>
-                <input
-                  type="checkbox"
                   checked={menu.smartFilter || false}
                   onChange={(e) => dispatch({ type: 'setSmartFilter', payload: e.target.checked })}
                 />
@@ -212,20 +204,6 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
               </label>
               <p className="setting-description">
                 {t('smart_filter_description')}
-              </p>
-            </div>
-
-            <div className="setting-item">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={menu.enableContextMenu || false}
-                  onChange={(e) => dispatch({ type: 'setEnableContextMenu', payload: e.target.checked })}
-                />
-                <span>{t('enable_context_menu')}</span>
-              </label>
-              <p className="setting-description">
-                {t('context_menu_description')}
               </p>
             </div>
           </div>
@@ -333,29 +311,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
               </div>
             </div>
 
-            {/* Entry 2: Cloud Backup */}
-            <div className="setting-item">
-              <div
-                className="backup-card"
-                onClick={() => setShowCloudBackup(true)}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="backup-icon-wrapper" style={{ background: '#e3f2fd' }}>
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
-                    <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z" fill="#08c" />
-                  </svg>
-                </div>
-                <div className="backup-content">
-                  <div className="backup-title">云备份</div>
-                  <p className="setting-description">
-                    Google Drive / Dropbox / OneDrive
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Entry 3: WebDAV */}
+            {/* Entry 2: WebDAV */}
             <div className="setting-item">
               <div
                 className="backup-card"
@@ -432,10 +388,6 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
             />
           </div>
         </div>
-      )}
-
-      {showCloudBackup && (
-        <CloudBackup onClose={() => setShowCloudBackup(false)} />
       )}
 
       {showWebDAV && (

@@ -208,7 +208,7 @@ export class EntryStorage {
       secret = entry.secret;
     } else {
       secret = "";
-      console.warn("Invalid entry", entry);
+      // Invalid entry - don't log details for security
     }
 
     let encrypted = entry.encryption?.getEncryptionStatus() || false;
@@ -276,7 +276,7 @@ export class EntryStorage {
         index: entry.index,
       };
     } else if (encrypted) {
-      console.error("Could not encrypt malformed entry: ", entry);
+      // Could not encrypt malformed entry - don't log details for security
     }
 
     return storageItem;
@@ -335,11 +335,9 @@ export class EntryStorage {
     hash: string
   ) {
     if (typeof _data[hash] !== "object") {
-      console.log('Key "' + hash + '" is not an object');
       return false;
     } else {
       if (!this.isOTPStorage(_data[hash])) {
-        console.log('Key "' + hash + '" is not OTPStorage');
         return false;
       }
       return true;

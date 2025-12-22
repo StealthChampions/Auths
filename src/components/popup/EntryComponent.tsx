@@ -235,7 +235,6 @@ export default function EntryComponent({
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log('[EntryComponent] handleEdit clicked, entry:', entry.issuer, 'onEdit:', !!onEdit);
     if (onEdit) {
       onEdit(entry);
     }

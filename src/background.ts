@@ -67,7 +67,6 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
       );
       const webdav = new WebDAV();
       await webdav.upload(encryption);
-      console.log('Auto backup executed');
     }
     return true;
   }

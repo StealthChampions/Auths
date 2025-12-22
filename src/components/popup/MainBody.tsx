@@ -95,8 +95,6 @@ export default function MainBody() {
 
   const folders = Array.from(new Set(entries?.map((e: OTPEntryInterface) => e.folder).filter(Boolean))) as string[];
 
-  console.log('[MainBody] entries:', entries?.length, 'filteredEntries:', filteredEntries.length, 'searchText:', searchText);
-
   const handleClearFilter = () => {
     dispatch({ type: 'stopFilter' });
     if (entries?.length >= 10) {
@@ -146,7 +144,6 @@ export default function MainBody() {
   };
 
   const handleEditEntry = (entry: OTPEntryInterface) => {
-    console.log('[MainBody] handleEditEntry called, entry:', entry.issuer);
     setEditingEntry(entry);
     setShowEditModal(true);
   };
@@ -236,8 +233,6 @@ export default function MainBody() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    console.log('[MainBody] File selected:', file.name, file.type, file.size);
-
     if (!file.type.startsWith('image/')) {
       notificationDispatch({ type: 'alert', payload: t('qr_error_not_image') });
       return;
@@ -253,12 +248,8 @@ export default function MainBody() {
       const dataUrl = event.target?.result as string;
       if (!dataUrl) return;
 
-      console.log('[MainBody] Processing image...');
-
       const img = new Image();
       img.onload = () => {
-        console.log('[MainBody] Image loaded:', img.width, 'x', img.height);
-
         if (!canvasRef.current) {
           notificationDispatch({ type: 'alert', payload: t('qr_error_canvas_unavailable') });
           return;
@@ -276,13 +267,10 @@ export default function MainBody() {
         context.drawImage(img, 0, 0);
 
         const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-        console.log('[MainBody] Calling jsQR...');
 
         let code = jsQR(imageData.data, imageData.width, imageData.height, {
           inversionAttempts: 'attemptBoth',
         });
-
-        console.log('[MainBody] jsQR result:', code ? code.data : 'No QR found');
 
         if (code) {
           try {
@@ -294,7 +282,6 @@ export default function MainBody() {
             );
 
             if (isDuplicate) {
-              console.log('[MainBody] Duplicate account detected');
               notificationDispatch({ type: 'alert', payload: t('account_already_exists') });
               return;
             }
@@ -304,7 +291,6 @@ export default function MainBody() {
             // 成功后关闭选择页面
             setShowMethodSelector(false);
           } catch (err) {
-            console.error('[MainBody] Parse error:', err);
             notificationDispatch({ type: 'alert', payload: err instanceof Error ? err.message : t('qr_error_parse_failed') });
           }
         } else {

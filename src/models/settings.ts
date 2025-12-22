@@ -5,28 +5,14 @@ export enum StorageLocation {
 
 interface UserSettingsData {
   // local settings
-  driveEncrypted?: boolean;
-  driveFolder?: string;
-  driveRefreshToken?: string;
-  driveRevoked?: boolean;
-  driveToken?: string;
-  dropboxEncrypted?: boolean;
-  dropboxRevoked?: boolean;
-  dropboxToken?: string;
   lastRemindingBackupTime?: number;
   offset?: number;
-  oneDriveBusiness?: boolean;
-  oneDriveEncrypted?: boolean;
-  oneDriveRevoked?: boolean;
-  oneDriveRefreshToken?: string;
-  oneDriveToken?: string;
   storageLocation?: StorageLocation;
+  webdavConfigured?: boolean;
 
   // syncable settings
   advisorIgnoreList?: string[];
-  autofill?: boolean;
   autolock?: number;
-  enableContextMenu?: boolean;
   encodedPhrase?: string;
   smartFilter?: boolean;
   theme?: string;
@@ -34,24 +20,12 @@ interface UserSettingsData {
   zoom?: number;
 }
 
-// Maybe we can have a better way to define this
+// Local-only settings keys
 const LocalUserSettingsDataKeys = [
-  "driveEncrypted",
-  "driveFolder",
-  "driveRefreshToken",
-  "driveRevoked",
-  "driveToken",
-  "dropboxEncrypted",
-  "dropboxRevoked",
-  "dropboxToken",
   "lastRemindingBackupTime",
   "offset",
-  "oneDriveBusiness",
-  "oneDriveEncrypted",
-  "oneDriveRevoked",
-  "oneDriveRefreshToken",
-  "oneDriveToken",
   "storageLocation",
+  "webdavConfigured",
 ];
 
 export class UserSettings {
@@ -175,35 +149,14 @@ export class UserSettings {
   }
 }
 
-type BooleanOption =
-  | "autofill"
-  | "driveEncrypted"
-  | "driveRevoked"
-  | "dropboxEncrypted"
-  | "dropboxRevoked"
-  | "enableContextMenu"
-  | "oneDriveBusiness"
-  | "oneDriveEncrypted"
-  | "oneDriveRevoked"
-  | "smartFilter";
+type BooleanOption = "smartFilter" | "webdavConfigured";
 
 type NumberOption = "autolock" | "lastRemindingBackupTime" | "offset" | "zoom";
 
 type JSONOption = "advisorIgnoreList";
 
 function isBooleanOption(key: string): key is BooleanOption {
-  return [
-    "autofill",
-    "driveEncrypted",
-    "driveRevoked",
-    "dropboxEncrypted",
-    "dropboxRevoked",
-    "enableContextMenu",
-    "oneDriveBusiness",
-    "oneDriveEncrypted",
-    "oneDriveRevoked",
-    "smartFilter",
-  ].includes(key);
+  return ["smartFilter", "webdavConfigured"].includes(key);
 }
 
 function isNumberOption(key: string): key is NumberOption {

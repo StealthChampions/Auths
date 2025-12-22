@@ -213,15 +213,11 @@ export class OTPEntry implements OTPEntryInterface {
     }
 
     if (decryptedData?.dataType !== "OTPStorage") {
-      console.warn("Decrypt successful, but malformed encData!", this.hash);
+      // Malformed encData after decryption - skip silently
     }
 
     if (decryptedData.hash !== this.hash) {
-      console.warn(
-        "Decrypt successful, but hash mismatch!",
-        this.hash,
-        decryptedData.hash
-      );
+      // Hash mismatch after decryption - skip silently
     }
 
     this.account = decryptedData.account || "";

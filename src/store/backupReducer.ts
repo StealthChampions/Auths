@@ -1,78 +1,29 @@
-// Backup reducer for managing backup settings
+/**
+ * Backup reducer - Phase 1 MVP
+ * 仅保留 WebDAV 备份状态管理
+ */
+
 export interface BackupState {
-  dropboxEncrypted: boolean;
-  driveEncrypted: boolean;
-  oneDriveEncrypted: boolean;
-  dropboxToken?: string;
-  driveToken?: string;
-  oneDriveToken?: string;
+  webdavConfigured: boolean;
+  lastBackupTime?: number;
 }
 
-export type BackupAction = 
-  | { type: 'setEnc'; payload: { service: 'dropbox' | 'drive' | 'onedrive'; value: boolean } }
-  | { type: 'setDropboxToken'; payload: string }
-  | { type: 'setDriveToken'; payload: string }
-  | { type: 'setOneDriveToken'; payload: string }
-  | { type: 'clearDropboxToken' }
-  | { type: 'clearDriveToken' }
-  | { type: 'clearOneDriveToken' };
+export type BackupAction =
+  | { type: 'setWebdavConfigured'; payload: boolean }
+  | { type: 'setLastBackupTime'; payload: number };
 
 const initialState: BackupState = {
-  dropboxEncrypted: false,
-  driveEncrypted: false,
-  oneDriveEncrypted: false,
+  webdavConfigured: false,
 };
 
 export function backupReducer(state = initialState, action: BackupAction): BackupState {
   switch (action.type) {
-    case 'setEnc':
-      switch (action.payload.service) {
-        case 'dropbox':
-          return { ...state, dropboxEncrypted: action.payload.value };
-        case 'drive':
-          return { ...state, driveEncrypted: action.payload.value };
-        case 'onedrive':
-          return { ...state, oneDriveEncrypted: action.payload.value };
-        default:
-          return state;
-      }
-    
-    case 'setDropboxToken':
-      return {
-        ...state,
-        dropboxToken: action.payload
-      };
-    
-    case 'setDriveToken':
-      return {
-        ...state,
-        driveToken: action.payload
-      };
-    
-    case 'setOneDriveToken':
-      return {
-        ...state,
-        oneDriveToken: action.payload
-      };
-    
-    case 'clearDropboxToken':
-      return {
-        ...state,
-        dropboxToken: undefined
-      };
-    
-    case 'clearDriveToken':
-      return {
-        ...state,
-        driveToken: undefined
-      };
-    
-    case 'clearOneDriveToken':
-      return {
-        ...state,
-        oneDriveToken: undefined
-      };
-    
+    case 'setWebdavConfigured':
+      return { ...state, webdavConfigured: action.payload };
+
+    case 'setLastBackupTime':
+      return { ...state, lastBackupTime: action.payload };
+
     default:
       return state;
   }

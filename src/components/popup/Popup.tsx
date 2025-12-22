@@ -36,11 +36,10 @@ export default function Popup() {
       try {
         const result = await chrome.storage.local.get(['entries']);
         if (result.entries && Array.isArray(result.entries)) {
-          console.log('[Popup] Loaded entries from storage:', result.entries.length);
           accountsDispatch({ type: 'setEntries', payload: result.entries });
         }
-      } catch (err) {
-        console.error('[Popup] Failed to load entries:', err);
+      } catch {
+        // Silently handle loading errors
       }
     };
     loadEntries();
@@ -140,8 +139,7 @@ export default function Popup() {
           alert(t('too_many_attempts'));
         }
       }
-    } catch (err) {
-      console.error('Unlock failed:', err);
+    } catch {
       setUnlockAttempts(prev => prev + 1);
     }
   };

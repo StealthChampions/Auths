@@ -1,8 +1,21 @@
 import React, { useState } from 'react';
+import { SecureHash } from '../../models/encryption';
 import './NewComponents.css';
 
 interface WebDAVProps {
     onClose: () => void;
+}
+
+/**
+ * 获取当前会话中的主密码（用于加密 WebDAV 凭据）
+ */
+async function getCachedPassphrase(): Promise<string | null> {
+    try {
+        const result = await chrome.storage.session.get(['cachedPassphrase']);
+        return result.cachedPassphrase || null;
+    } catch {
+        return null;
+    }
 }
 
 export default function WebDAV({ onClose }: WebDAVProps) {
@@ -29,16 +42,26 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             return;
         }
 
+        // 获取主密码用于加密 WebDAV 凭据
+        const masterPassword = await getCachedPassphrase();
+        if (!masterPassword) {
+            setMessage({ type: 'error', text: '请先解锁应用后再配置 WebDAV' });
+            return;
+        }
+
+        // 加密 WebDAV 密码
+        const encryptedPassword = SecureHash.encryptData(password, masterPassword);
+
         const config = {
             serverUrl,
             username,
-            password,
+            encryptedPassword, // 存储加密后的密码
             autoBackup,
             backupInterval: parseInt(backupInterval),
             retentionDays
         };
 
-        // Save config to storage
+        // Save config to storage (不再存储明文密码)
         await chrome.storage.local.set({ webdavConfig: config });
 
         // Configure alarm
@@ -86,7 +109,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                 ? `${serverUrl}${filename}`
                 : `${serverUrl}/${filename}`;
 
-            // Upload to WebDAV
+            // Upload to WebDAV (使用当前状态中的明文密码，因为用户刚输入)
             const response = await fetch(uploadUrl, {
                 method: 'PUT',
                 headers: {
@@ -110,7 +133,6 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                 }
             }
         } catch (err) {
-            console.error('WebDAV backup failed:', err);
             setMessage({ type: 'error', text: '备份失败: ' + (err instanceof Error ? err.message : '网络错误') });
         } finally {
             setLoading(false);
@@ -124,7 +146,25 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             if (result.webdavConfig) {
                 setServerUrl(result.webdavConfig.serverUrl || '');
                 setUsername(result.webdavConfig.username || '');
-                setPassword(result.webdavConfig.password || '');
+                // 密码需要解密才能显示，如果有主密码的话
+                // 为安全起见，不自动填充密码，让用户重新输入
+                // 或显示占位符
+                if (result.webdavConfig.encryptedPassword) {
+                    // 有加密密码，尝试解密
+                    const masterPassword = await getCachedPassphrase();
+                    if (masterPassword) {
+                        const decrypted = SecureHash.decryptData(
+                            result.webdavConfig.encryptedPassword,
+                            masterPassword
+                        );
+                        if (decrypted) {
+                            setPassword(decrypted);
+                        }
+                    }
+                } else if (result.webdavConfig.password) {
+                    // 兼容旧版本的明文密码
+                    setPassword(result.webdavConfig.password);
+                }
                 setAutoBackup(result.webdavConfig.autoBackup || false);
                 setBackupInterval(result.webdavConfig.backupInterval?.toString() || '1440');
                 setRetentionDays(result.webdavConfig.retentionDays || 30);

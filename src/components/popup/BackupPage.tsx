@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './BackupPage.css';
-import { EntryStorage } from '../../../models/storage';
-import { Encryption } from '../../../models/encryption';
+import { EntryStorage } from '../../models/storage';
+import { Encryption } from '../../models/encryption';
 
 interface BackupPageProps {
   onBack: () => void;
@@ -28,9 +28,8 @@ export default function BackupPage({ onBack, encryption, onReload }: BackupPageP
       URL.revokeObjectURL(url);
 
       alert('备份文件已下载');
-    } catch (error) {
-      console.error('Export failed:', error);
-      alert('导出失败：' + (error instanceof Error ? error.message : 'Unknown error'));
+    } catch {
+      alert('导出失败');
     }
   };
 
@@ -48,7 +47,6 @@ export default function BackupPage({ onBack, encryption, onReload }: BackupPageP
         reader.onload = async (e) => {
           try {
             const data = JSON.parse(e.target?.result as string);
-            console.log('导入的数据:', data);
 
             if (!encryption) {
               alert('导入失败：需要先设置密码');
@@ -59,29 +57,19 @@ export default function BackupPage({ onBack, encryption, onReload }: BackupPageP
             await EntryStorage.import(encryption, data);
             await onReload();
             alert('导入成功！');
-          } catch (error) {
-            console.error('Import error:', error);
-            alert('导入失败：' + (error instanceof Error ? error.message : '文件格式错误'));
+          } catch {
+            alert('导入失败：文件格式错误');
           } finally {
             setImporting(false);
           }
         };
         reader.readAsText(file);
-      } catch (error) {
-        console.error('File read error:', error);
+      } catch {
         alert('文件读取失败');
         setImporting(false);
       }
     };
     input.click();
-  };
-
-  const handleExportQR = () => {
-    alert('QR 码导出功能\n\n将生成包含所有账户的 QR 码\n\n目前这是占位符功能');
-  };
-
-  const handleCloudBackup = (service: string) => {
-    alert(`${service} 云备份功能\n\n需要配置云存储凭据\n\n目前这是占位符功能`);
   };
 
   return (
@@ -95,7 +83,7 @@ export default function BackupPage({ onBack, encryption, onReload }: BackupPageP
 
       <div className="backup-content">
         <section className="backup-section">
-          <h2>📁 本地备份</h2>
+          <h2>本地备份</h2>
           <p className="section-desc">
             将账户数据导出为文件，或从文件恢复
           </p>
@@ -120,73 +108,27 @@ export default function BackupPage({ onBack, encryption, onReload }: BackupPageP
         </section>
 
         <section className="backup-section">
-          <h2>📷 QR 码备份</h2>
+          <h2>WebDAV 同步</h2>
           <p className="section-desc">
-            生成或扫描 QR 码进行备份
+            使用 WebDAV 协议同步到自托管服务器
           </p>
-
           <div className="backup-actions">
-            <button className="btn-action" onClick={handleExportQR}>
-              <span className="icon">📊</span>
+            <button className="btn-action" onClick={() => alert('请在设置中配置 WebDAV')}>
+              <span className="icon">🔗</span>
               <div>
-                <div className="action-title">导出为 QR 码</div>
-                <div className="action-desc">生成包含账户的 QR 码</div>
+                <div className="action-title">配置 WebDAV</div>
+                <div className="action-desc">连接到你的私有云存储</div>
               </div>
-            </button>
-
-            <button className="btn-action" onClick={() => alert('QR 导入功能')}>
-              <span className="icon">📸</span>
-              <div>
-                <div className="action-title">扫描 QR 码恢复</div>
-                <div className="action-desc">从 QR 码图片导入</div>
-              </div>
-            </button>
-          </div>
-        </section>
-
-        <section className="backup-section">
-          <h2>☁️ 云备份</h2>
-          <p className="section-desc">
-            使用云存储服务自动备份
-          </p>
-
-          <div className="cloud-services">
-            <button
-              className="cloud-btn"
-              onClick={() => handleCloudBackup('Google Drive')}
-            >
-              <div className="cloud-icon">📂</div>
-              <div className="cloud-name">Google Drive</div>
-              <div className="cloud-status">未连接</div>
-            </button>
-
-            <button
-              className="cloud-btn"
-              onClick={() => handleCloudBackup('Dropbox')}
-            >
-              <div className="cloud-icon">📦</div>
-              <div className="cloud-name">Dropbox</div>
-              <div className="cloud-status">未连接</div>
-            </button>
-
-            <button
-              className="cloud-btn"
-              onClick={() => handleCloudBackup('OneDrive')}
-            >
-              <div className="cloud-icon">☁️</div>
-              <div className="cloud-name">OneDrive</div>
-              <div className="cloud-status">未连接</div>
             </button>
           </div>
         </section>
 
         <section className="backup-section warning">
-          <h2>⚠️ 重要提示</h2>
+          <h2>重要提示</h2>
           <ul>
             <li>备份文件包含敏感信息，请妥善保管</li>
             <li>建议定期创建备份</li>
             <li>恢复数据前请确认文件来源可信</li>
-            <li>云备份需要网络连接</li>
           </ul>
         </section>
       </div>

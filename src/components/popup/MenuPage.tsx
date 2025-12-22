@@ -7,7 +7,7 @@ export default function MenuPage() {
     menu,
     dispatch: menuDispatch
   } = useMenu();
-  
+
   const { dispatch: viewDispatch } = useCurrentView();
   const { dispatch: styleDispatch } = useStyle();
 
@@ -25,16 +25,8 @@ export default function MenuPage() {
     }
   };
 
-  const handleSetAutofill = (value: boolean) => {
-    menuDispatch({ type: 'setAutofill', payload: value });
-  };
-
   const handleSetSmartFilter = (value: boolean) => {
     menuDispatch({ type: 'setSmartFilter', payload: value });
-  };
-
-  const handleSetEnableContextMenu = (value: boolean) => {
-    menuDispatch({ type: 'setEnableContextMenu', payload: value });
   };
 
   const handleSetTheme = (newTheme: string) => {
@@ -66,7 +58,7 @@ export default function MenuPage() {
           ×
         </ButtonInput>
       </div>
-      
+
       <div className="menu-content">
         <div className="menu-section">
           <h3>常规设置</h3>
@@ -81,18 +73,7 @@ export default function MenuPage() {
               onChange={(e) => handleSetZoom(Number(e.target.value))}
             />
           </div>
-          
-          <div className="menu-item">
-            <label>
-              <input
-                type="checkbox"
-                checked={menu.useAutofill}
-                onChange={(e) => handleSetAutofill(e.target.checked)}
-              />
-              启用自动填充
-            </label>
-          </div>
-          
+
           <div className="menu-item">
             <label>
               <input
@@ -103,19 +84,8 @@ export default function MenuPage() {
               智能过滤
             </label>
           </div>
-          
-          <div className="menu-item">
-            <label>
-              <input
-                type="checkbox"
-                checked={menu.enableContextMenu}
-                onChange={(e) => handleSetEnableContextMenu(e.target.checked)}
-              />
-              启用上下文菜单
-            </label>
-          </div>
         </div>
-        
+
         <div className="menu-section">
           <h3>外观</h3>
           <div className="menu-item">
@@ -133,7 +103,7 @@ export default function MenuPage() {
             </select>
           </div>
         </div>
-        
+
         <div className="menu-section">
           <h3>安全</h3>
           <div className="menu-item">
@@ -147,7 +117,7 @@ export default function MenuPage() {
             />
           </div>
         </div>
-        
+
         <div className="menu-section">
           <h3>其他</h3>
           <div className="menu-item">
@@ -158,7 +128,7 @@ export default function MenuPage() {
               备份设置
             </ButtonInput>
           </div>
-          
+
           <div className="menu-item">
             <ButtonInput
               onClick={() => navigateToPage('AboutPage')}
@@ -168,7 +138,7 @@ export default function MenuPage() {
             </ButtonInput>
           </div>
         </div>
-        
+
         <div className="menu-footer">
           <p>版本: {menu.version}</p>
         </div>
