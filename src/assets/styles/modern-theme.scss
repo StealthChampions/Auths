@@ -199,7 +199,7 @@ body {
     .logo {
       width: 32px;
       height: 32px;
-      background: linear-gradient(135deg, var(--color-primary) 0%, #7c3aed 100%);
+      background: var(--color-primary);
       border-radius: var(--radius-md);
       display: flex;
       align-items: center;
@@ -396,7 +396,7 @@ body {
   // Pinned state
   &.pinned {
     border-left: 3px solid var(--color-warning);
-    background: linear-gradient(90deg, var(--color-warning-light) 0%, var(--color-bg-primary) 100%);
+    background: var(--color-warning-light);
   }
 
   // Timeout state
@@ -1303,7 +1303,7 @@ body {
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, var(--color-primary) 0%, #7c3aed 100%);
+      background: var(--color-primary);
       border-radius: var(--radius-md);
       flex-shrink: 0;
 
