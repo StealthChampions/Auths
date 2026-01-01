@@ -1,0 +1,1204 @@
+{
+    "extName": {
+        "message": "Auths",
+        "description": "Extension Name."
+    },
+    "extShortName": {
+        "message": "Auths",
+        "description": "Extension Short Name."
+    },
+    "extDesc": {
+        "message": "Secure and simple two-factor authenticator for managing your 2FA codes",
+        "description": "Extension Description."
+    },
+    "added": {
+        "message": "Added.",
+        "description": "Added Account."
+    },
+    "errorqr": {
+        "message": "Unrecognized QR code.",
+        "description": "QR Error."
+    },
+    "errorsecret": {
+        "message": "Invalid secret",
+        "description": "Secret Error."
+    },
+    "add_code": {
+        "message": "Add Account",
+        "description": "Add account."
+    },
+    "add_qr": {
+        "message": "Scan QR Code",
+        "description": "Scan QR Code."
+    },
+    "add_secret": {
+        "message": "Manual Entry",
+        "description": "Manual Entry."
+    },
+    "migration_fail": {
+        "message": "Import failed. If you are migrating from Google Authenticator, please re-export data from Google Authenticator and try again.",
+        "description": "Import migration data failed."
+    },
+    "migration_partly_fail": {
+        "message": "Some account data was not successfully imported.",
+        "description": "Some migration data is broken."
+    },
+    "close": {
+        "message": "Close",
+        "description": "Close."
+    },
+    "ok": {
+        "message": "OK",
+        "description": "OK."
+    },
+    "yes": {
+        "message": "Yes",
+        "description": "Yes."
+    },
+    "no": {
+        "message": "No",
+        "description": "No."
+    },
+    "account": {
+        "message": "Account",
+        "description": "Account."
+    },
+    "accountName": {
+        "message": "Username",
+        "description": "Account Name."
+    },
+    "issuer": {
+        "message": "Issuer",
+        "description": "Issuer."
+    },
+    "secret": {
+        "message": "Secret",
+        "description": "Secret."
+    },
+    "updateSuccess": {
+        "message": "Success.",
+        "description": "Update Success."
+    },
+    "updateFailure": {
+        "message": "Failure.",
+        "description": "Update Failure."
+    },
+    "about": {
+        "message": "About",
+        "description": "About."
+    },
+    "advanced_options": {
+        "message": "Advanced Options"
+    },
+    "permission_denied": {
+        "message": "Permission denied. WebDAV sync requires access to the server URL."
+    },
+    "sync_time": {
+        "message": "Sync Server Time"
+    },
+    "sync_time_desc": {
+        "message": "Correct time drift with Google servers"
+    },
+    "syncing": {
+        "message": "Syncing..."
+    },
+    "sync_success": {
+        "message": "Time synced successfully. Offset: {offset}s"
+    },
+    "sync_error": {
+        "message": "Failed to sync time"
+    },
+    "move_up": {
+        "message": "Move Up",
+        "description": "Tooltip for move up button"
+    },
+    "move_down": {
+        "message": "Move Down",
+        "description": "Tooltip for move down button"
+    },
+    "settings": {
+        "message": "Settings",
+        "description": "Settings."
+    },
+    "security": {
+        "message": "Security",
+        "description": "Security."
+    },
+    "current_phrase": {
+        "message": "Current Passphrase",
+        "description": "Current Passphrase."
+    },
+    "new_phrase": {
+        "message": "New Passphrase",
+        "description": "New Passphrase."
+    },
+    "phrase": {
+        "message": "Passphrase",
+        "description": "Passphrase."
+    },
+    "confirm_phrase": {
+        "message": "Confirm Passphrase",
+        "description": "Confirm Passphrase."
+    },
+    "confirm_delete": {
+        "message": "Are you sure you want to delete this secret? This action cannot be undone.",
+        "description": "Remove entry confirmation"
+    },
+    "confirm_delete_all": {
+        "message": "I understand that all data will be deleted and cannot be recovered.",
+        "description": "Message that user is required to acknowledge before clearing all data."
+    },
+    "delete_all": {
+        "message": "Reset Authenticator"
+    },
+    "delete_all_warning": {
+        "message": "This will delete all data and completely reset the Authenticator. Any deleted data cannot be recovered! You should save a backup before resetting the Authenticator."
+    },
+    "security_warning": {
+        "message": "Your account data will be encrypted using this passphrase. If you forget your passphrase, no one can help you.",
+        "description": "Passphrase Warning."
+    },
+    "update": {
+        "message": "Update",
+        "description": "Update."
+    },
+    "phrase_incorrect": {
+        "message": "Passphrase incorrect. You cannot add new accounts or change the passphrase. Please provide the correct passphrase and try again.",
+        "description": "Passphrase Incorrect."
+    },
+    "phrase_incorrect_export": {
+        "message": "Backup file will not contain accounts that could not be decrypted.",
+        "description": "Skip Unable-decripted Data."
+    },
+    "phrase_not_match": {
+        "message": "Passphrase does not match.",
+        "description": "Passphrase Not Match."
+    },
+    "encrypted": {
+        "message": "Encrypted",
+        "description": "Encrypted."
+    },
+    "copied": {
+        "message": "Copied",
+        "description": "Copied."
+    },
+    "feedback": {
+        "message": "Feedback",
+        "description": "Feedback."
+    },
+    "translate": {
+        "message": "Translate",
+        "description": "Translate."
+    },
+    "source": {
+        "message": "Source Code",
+        "description": "Source Code."
+    },
+    "passphrase_info": {
+        "message": "Enter passphrase to decrypt account data.",
+        "description": "Passphrase Info"
+    },
+    "sync_clock": {
+        "message": "Sync Clock with Google",
+        "description": "Sync Clock"
+    },
+    "remember_phrase": {
+        "message": "Remember Passphrase",
+        "description": "Remember Passphrase"
+    },
+    "clock_too_far_off": {
+        "message": "Warning! Your local clock is too far off. Please fix it before proceeding.",
+        "description": "Local Time is Too Far Off"
+    },
+    "remind_backup": {
+        "message": "Have you created a backup for your account data? Don't wait until it's too late.",
+        "description": "Remind Backup"
+    },
+    "capture_failed": {
+        "message": "Capture failed. Please reload the page you are viewing and try again.",
+        "description": "Capture Failed"
+    },
+    "capture_local_file_failed": {
+        "message": "Are you trying to scan a QR code from a local file? Use Import QR Image Backup instead.",
+        "description": "Import QR image backup instead of scan local image"
+    },
+    "based_on_time": {
+        "message": "Time Based",
+        "description": "Time Based"
+    },
+    "based_on_counter": {
+        "message": "Counter Based",
+        "description": "Counter Based"
+    },
+    "resize_popup_page": {
+        "message": "Preferences",
+        "description": "Popup Page Settings"
+    },
+    "scale": {
+        "message": "Scale",
+        "description": "Scale"
+    },
+    "export_info": {
+        "message": "Warning: All backups are unencrypted. Want to add accounts to other apps? Click the hidden icon in the top right of the account.",
+        "description": "Export menu info text"
+    },
+    "download_backup": {
+        "message": "Download Backup File",
+        "description": "Download backup file."
+    },
+    "import_backup": {
+        "message": "Import Backup",
+        "description": "Import backup."
+    },
+    "import_backup_file": {
+        "message": "Import Backup File",
+        "description": "Import backup file."
+    },
+    "import_backup_qr": {
+        "message": "Import QR Image Backup",
+        "description": "Import qr image backup."
+    },
+    "import_qr_images": {
+        "message": "Import QR Code Images",
+        "description": "Import qr images. Shown as add account method."
+    },
+    "import_backup_code": {
+        "message": "Import Text Backup",
+        "description": "Import backup code."
+    },
+    "import_otp_urls": {
+        "message": "Import OTP URLs",
+        "description": "Import OTP URLs. Shown as add account method."
+    },
+    "import_backup_qr_partly_failed": {
+        "message": "Import successful, but some QR codes could not be recognized.",
+        "description": "Import successful, but some QR image cannot be recognized."
+    },
+    "import_backup_qr_in_batches": {
+        "message": "You can select multiple files to import in batches.",
+        "description": "You can select multiple image files to import backup in batches."
+    },
+    "show_all_entries": {
+        "message": "Show All Entries",
+        "description": "Show all entries."
+    },
+    "dropbox_risk": {
+        "message": "Warning: Backups are unencrypted. Use at your own risk.",
+        "description": "Backup risk warning."
+    },
+    "import_error_password": {
+        "message": "You must provide the correct password to import backups.",
+        "description": "Error password warning when import backups."
+    },
+    "local_passphrase_warning": {
+        "message": "Your passphrase is saved locally. Please change it immediately via the Security menu.",
+        "description": "localStorage password warning."
+    },
+    "remove": {
+        "message": "Remove",
+        "description": "Remove password."
+    },
+    "download_enc_backup": {
+        "message": "Download Encrypted Backup",
+        "description": "Download Encrypted Backup"
+    },
+    "search": {
+        "message": "Search",
+        "description": "Search"
+    },
+    "popout": {
+        "message": "Popout Mode",
+        "description": "Make window turn into persistent popup"
+    },
+    "lock": {
+        "message": "Lock",
+        "description": "Lock accounts"
+    },
+    "edit": {
+        "message": "Edit",
+        "description": "Edit"
+    },
+    "manual_dropbox": {
+        "message": "Manual Backup",
+        "description": "Manual backup"
+    },
+    "use_autofill": {
+        "message": "Enable Autofill",
+        "description": "Use Autofill"
+    },
+    "use_high_contrast": {
+        "message": "Use High Contrast",
+        "description": "Use High Contrast"
+    },
+    "theme": {
+        "message": "Theme",
+        "description": "Theme"
+    },
+    "theme_light": {
+        "message": "Light",
+        "description": "Light theme"
+    },
+    "theme_dark": {
+        "message": "Dark",
+        "description": "Dark theme"
+    },
+    "theme_simple": {
+        "message": "Simple",
+        "description": "Simple theme"
+    },
+    "theme_compact": {
+        "message": "Compact View",
+        "description": "Compact theme"
+    },
+    "theme_high_contrast": {
+        "message": "High Contrast",
+        "description": "High Contrast theme"
+    },
+    "theme_flat": {
+        "message": "Flat",
+        "description": "Flat theme"
+    },
+    "theme_violet": {
+        "message": "Violet",
+        "description": "Violet theme"
+    },
+    "theme_emerald": {
+        "message": "Emerald",
+        "description": "Emerald theme"
+    },
+    "theme_sunset": {
+        "message": "Sunset",
+        "description": "Sunset theme"
+    },
+    "theme_ocean": {
+        "message": "Ocean",
+        "description": "Ocean theme"
+    },
+    "theme_description": {
+        "message": "Select appearance theme",
+        "description": "Theme description"
+    },
+    "storage_sync_info": {
+        "message": "Automatically backup your data to 3rd party services.",
+        "description": "3rd party backup info"
+    },
+    "browser_sync": {
+        "message": "Browser Storage Sync",
+        "description": "Storage location"
+    },
+    "sign_in": {
+        "message": "Sign In",
+        "description": "Sign in to 3rd party storage services"
+    },
+    "sign_in_business": {
+        "message": "Sign In (Business)",
+        "description": "Sign in to 3rd party storage services"
+    },
+    "onedrive_business_perms": {
+        "message": "Why does Business account need higher permissions?"
+    },
+    "log_out": {
+        "message": "Sign Out",
+        "description": "Sign out of 3rd party storage services"
+    },
+    "token_revoked": {
+        "message": "Error authenticating to your $SERVICE$ account. Please try again.",
+        "description": "Error authenticating to backup service. $SERVICE$ will be replaced with a proper noun (E.g.: 'Google Drive' or 'Dropbox')",
+        "placeholders": {
+            "service": {
+                "content": "$1",
+                "example": "Google Drive"
+            }
+        }
+    },
+    "otp_unsupported_warn": {
+        "message": "You added a Steam or Battle.net account, so the backup file will not use the standard export format.",
+        "description": "Warning if using account that is not supported by standard backup format."
+    },
+    "otp_backup_inform": {
+        "message": "You can import backups from some other applications.",
+        "description": "Info text on import page"
+    },
+    "otp_backup_learn": {
+        "message": "Learn more",
+        "description": "learn more link on import page. Placed after otp_backup_inform"
+    },
+    "loading": {
+        "message": "Loading..."
+    },
+    "autolock": {
+        "message": "Auto-lock in"
+    },
+    "minutes": {
+        "message": "minutes"
+    },
+    "advanced": {
+        "message": "Advanced Options"
+    },
+    "period": {
+        "message": "Period"
+    },
+    "type": {
+        "message": "Type"
+    },
+    "invalid": {
+        "message": "Invalid Code"
+    },
+    "digits": {
+        "message": "Digits"
+    },
+    "algorithm": {
+        "message": "Algorithm"
+    },
+    "smart_filter": {
+        "message": "Smart Filter"
+    },
+    "backup": {
+        "message": "Backup"
+    },
+    "backup_file_info": {
+        "message": "Backup data to file."
+    },
+    "password_policy_default_hint": {
+        "message": "Your password does not meet your organization's security requirements. Contact your organization administrator for details."
+    },
+    "advisor": {
+        "message": "Advisor"
+    },
+    "advisor_insight_password_not_set": {
+        "message": "Set a password to protect your data."
+    },
+    "advisor_insight_auto_lock_not_set": {
+        "message": "Enable auto-lock to protect your data."
+    },
+    "advisor_insight_browser_sync_not_enabled": {
+        "message": "Browser sync is disabled. Enable it to allow account sync across browsers."
+    },
+    "advisor_insight_auto_fill_not_enabled": {
+        "message": "Enable autofill to automatically fill codes into websites."
+    },
+    "advisor_insight_smart_filter_not_enabled": {
+        "message": "Enable smart filter for quick access to accounts."
+    },
+    "show_all_insights": {
+        "message": "Show all insights."
+    },
+    "no_insight_available": {
+        "message": "No insights available. Everything looks good!"
+    },
+    "danger": {
+        "message": "Danger"
+    },
+    "warning": {
+        "message": "Warning"
+    },
+    "info": {
+        "message": "Info"
+    },
+    "dismiss": {
+        "message": "Dismiss"
+    },
+    "learn_more": {
+        "message": "Learn more"
+    },
+    "enable_context_menu": {
+        "message": "Add to context menu"
+    },
+    "no_entires": {
+        "message": "No accounts to display. Add your first account now."
+    },
+    "permissions": {
+        "message": "Permission Management"
+    },
+    "permission_revoke": {
+        "message": "Revoke"
+    },
+    "permission_show_required_permissions": {
+        "message": "Show irrevocable permissions"
+    },
+    "permission_required": {
+        "message": "This is a required permission and cannot be revoked."
+    },
+    "permission_active_tab": {
+        "message": "Access current tab to scan QR codes."
+    },
+    "permission_storage": {
+        "message": "Access browser storage to store account data."
+    },
+    "permission_identity": {
+        "message": "Used to sign in to 3rd party storage services."
+    },
+    "permission_alarms": {
+        "message": "Allows auto-lock function to work."
+    },
+    "permission_scripting": {
+        "message": "Inject scripts into current tab to scan QR codes and allow autofill function to work."
+    },
+    "permission_clipboard_write": {
+        "message": "Clipboard write-only permission to copy code to clipboard when you click the account."
+    },
+    "permission_context_menus": {
+        "message": "Add Authenticator to context menu."
+    },
+    "permission_sync_clock": {
+        "message": "Allow syncing time from Google."
+    },
+    "permission_dropbox": {
+        "message": "Allow backup to Dropbox."
+    },
+    "permission_dropbox_cannot_revoke": {
+        "message": "You must disable Dropbox backup first."
+    },
+    "permission_drive": {
+        "message": "Allow backup to Google Drive."
+    },
+    "permission_drive_cannot_revoke": {
+        "message": "You must disable Google Drive backup first."
+    },
+    "permission_onedrive": {
+        "message": "Allow backup to OneDrive."
+    },
+    "permission_onedrive_cannot_revoke": {
+        "message": "You must disable OneDrive backup first."
+    },
+    "permission_unknown_permission": {
+        "message": "Unknown permission. If you see this message, please send a bug report."
+    },
+    "phrase_wrong": {
+        "message": "Password incorrect"
+    },
+    "activate_auto_filter": {
+        "message": "Warning: Smart Filter loosely matches domains to accounts. Always confirm you are on the correct website before entering the verification code!"
+    },
+    "appName": {
+        "message": "Auths"
+    },
+    "back": {
+        "message": "Back"
+    },
+    "general": {
+        "message": "General"
+    },
+    "appearance": {
+        "message": "Appearance"
+    },
+    "theme_default": {
+        "message": "Default"
+    },
+    "zoom": {
+        "message": "Zoom"
+    },
+    "features": {
+        "message": "Features"
+    },
+    "enable_autofill": {
+        "message": "Enable Autofill"
+    },
+    "autofill_description": {
+        "message": "Automatically fill verification codes into websites"
+    },
+    "smart_filter_description": {
+        "message": "Automatically filter accounts based on the current website"
+    },
+    "context_menu_description": {
+        "message": "Add Authenticator to the browser's context menu"
+    },
+    "password_protection": {
+        "message": "Password Protection"
+    },
+    "auto_lock": {
+        "message": "Auto Lock"
+    },
+    "disabled": {
+        "message": "Disabled"
+    },
+    "minute": {
+        "message": "minute"
+    },
+    "hour": {
+        "message": "hour"
+    },
+    "auto_lock_description": {
+        "message": "Automatically lock the extension after a period of inactivity"
+    },
+    "reset_password": {
+        "message": "Reset Password"
+    },
+    "reset_password_warning": {
+        "message": "This will clear all data and reset the extension. This action cannot be undone."
+    },
+    "reset_password_confirm": {
+        "message": "Are you sure you want to reset all data? This action cannot be undone."
+    },
+    "password_reset": {
+        "message": "All data has been reset."
+    },
+    "privacy": {
+        "message": "Privacy"
+    },
+    "clear_all_data": {
+        "message": "Clear All Data"
+    },
+    "clear_all_data_warning": {
+        "message": "This will permanently delete all your accounts and settings."
+    },
+    "clear_all_data_confirm": {
+        "message": "Are you sure you want to delete all data? This action cannot be undone."
+    },
+    "all_data_cleared": {
+        "message": "All data cleared."
+    },
+    "backup_restore": {
+        "message": "Backup & Restore"
+    },
+    "backup_description": {
+        "message": "Export or import your account data"
+    },
+    "version": {
+        "message": "Version"
+    },
+    "developer": {
+        "message": "Developer"
+    },
+    "license": {
+        "message": "License"
+    },
+    "github": {
+        "message": "GitHub"
+    },
+    "report_issue": {
+        "message": "Report Issue"
+    },
+    "help": {
+        "message": "Help"
+    },
+    "search_accounts": {
+        "message": "Search accounts..."
+    },
+    "clear": {
+        "message": "Clear"
+    },
+    "accounts": {
+        "message": "accounts"
+    },
+    "done": {
+        "message": "Done"
+    },
+    "no_accounts_yet": {
+        "message": "No accounts yet"
+    },
+    "tap_to_add": {
+        "message": "Tap + to add your first account"
+    },
+    "no_matching_accounts": {
+        "message": "No matching accounts"
+    },
+    "try_different_search": {
+        "message": "Try a different search term"
+    },
+    "add_account": {
+        "message": "Add Account"
+    },
+    "account_name": {
+        "message": "Account Name"
+    },
+    "account_name_placeholder": {
+        "message": "e.g. Google, GitHub"
+    },
+    "username_optional": {
+        "message": "Username (Optional)"
+    },
+    "username_placeholder": {
+        "message": "e.g. user@example.com"
+    },
+    "secret_key": {
+        "message": "Secret Key"
+    },
+    "secret_key_placeholder": {
+        "message": "Enter your secret key"
+    },
+    "refresh_period": {
+        "message": "Refresh Period"
+    },
+    "seconds": {
+        "message": "Seconds"
+    },
+    "code_length": {
+        "message": "Code Length"
+    },
+    "please_enter_account_name": {
+        "message": "Please enter account name"
+    },
+    "please_enter_secret_key": {
+        "message": "Please enter secret key"
+    },
+    "invalid_secret_key": {
+        "message": "Invalid secret key format"
+    },
+    "add": {
+        "message": "Add"
+    },
+    "scan_qr_code": {
+        "message": "Scan QR Code"
+    },
+    "qr_code": {
+        "message": "QR Code"
+    },
+    "language": {
+        "message": "Language"
+    },
+    "follow_system": {
+        "message": "Follow System"
+    },
+    "language_description": {
+        "message": "Select the language for the app"
+    },
+    "lang_english": {
+        "message": "English"
+    },
+    "lang_chinese": {
+        "message": "Simplified Chinese"
+    },
+    "pin": {
+        "message": "Pin"
+    },
+    "unpin": {
+        "message": "Unpin"
+    },
+    "delete": {
+        "message": "Delete"
+    },
+    "delete_confirm": {
+        "message": "Are you sure you want to delete {name}?"
+    },
+    "counter": {
+        "message": "Counter"
+    },
+    "password_setup": {
+        "message": "Setup Password"
+    },
+    "password_setup_description": {
+        "message": "Create a password to protect your accounts"
+    },
+    "create_password": {
+        "message": "Create Password"
+    },
+    "confirm_password": {
+        "message": "Confirm Password"
+    },
+    "set_password": {
+        "message": "Set Password"
+    },
+    "skip": {
+        "message": "Skip"
+    },
+    "password_mismatch": {
+        "message": "Passwords do not match"
+    },
+    "password_setup_failed": {
+        "message": "Password setup failed"
+    },
+    "unlock": {
+        "message": "Unlock"
+    },
+    "enter_password": {
+        "message": "Enter your password"
+    },
+    "forgot_password": {
+        "message": "Forgot Password?"
+    },
+    "forgot_password_confirm": {
+        "message": "This will reset all data. Are you sure?"
+    },
+    "too_many_attempts": {
+        "message": "Too many attempts. Please try again later."
+    },
+    "qr_scanner_description": {
+        "message": "Select a QR code area on the current page or upload an image file."
+    },
+    "qr_capture_screen": {
+        "message": "Capture Screen"
+    },
+    "qr_capture_screen_desc": {
+        "message": "Scan QR code from current webpage"
+    },
+    "qr_upload_image": {
+        "message": "Upload Image"
+    },
+    "qr_upload_image_desc": {
+        "message": "Select a QR code image file"
+    },
+    "qr_error_not_otp_url": {
+        "message": "This QR code is not a valid authenticator code. Requires otpauth:// format URL."
+    },
+    "qr_error_unsupported_type": {
+        "message": "Unsupported OTP type. Only TOTP and HOTP are supported."
+    },
+    "qr_error_no_secret": {
+        "message": "Secret key not found in QR code."
+    },
+    "qr_error_invalid_secret": {
+        "message": "Invalid secret key format. Must be Base32 encoded."
+    },
+    "qr_error_invalid_period": {
+        "message": "Invalid refresh period. Must be between 1 and 300 seconds."
+    },
+    "qr_error_invalid_digits": {
+        "message": "Invalid code length. Must be between 4 and 10 digits."
+    },
+    "qr_error_parse_failed": {
+        "message": "Failed to parse QR code data."
+    },
+    "qr_error_unknown": {
+        "message": "Unknown error occurred during scanning."
+    },
+    "qr_error_no_active_tab": {
+        "message": "No active tab found. Please try again."
+    },
+    "qr_error_capture_permission": {
+        "message": "Permission denied. Please allow screen capture permission."
+    },
+    "qr_error_capture_failed": {
+        "message": "Screen capture failed. Please try again."
+    },
+    "qr_error_canvas_unavailable": {
+        "message": "Canvas unavailable. Please try again."
+    },
+    "qr_error_not_found": {
+        "message": "QR code not found in image. Please ensure the QR code is clearly visible."
+    },
+    "qr_error_image_load_failed": {
+        "message": "Failed to load image. Please try another file."
+    },
+    "qr_error_not_image": {
+        "message": "Selected file is not an image. Please select an image file."
+    },
+    "qr_error_file_too_large": {
+        "message": "File too large. Max supported size is 10MB."
+    },
+    "qr_error_file_read_failed": {
+        "message": "File read failed. Please try again."
+    },
+    "qr_unknown_issuer": {
+        "message": "Unknown"
+    },
+    "qr_select_region": {
+        "message": "Select Region"
+    },
+    "qr_select_region_desc": {
+        "message": "Drag to select QR code region on the page"
+    },
+    "qr_region_instruction": {
+        "message": "Drag to select QR code region. Press ESC to cancel."
+    },
+    "qr_error_restricted_page": {
+        "message": "Cannot scan on this page. Please try on a regular webpage."
+    },
+    "qr_error_selection_too_small": {
+        "message": "Selection too small. Please select a larger area."
+    },
+    "qr_error_connection_failed": {
+        "message": "Failed to connect to page. Please refresh the page and try again."
+    },
+    "account_added_successfully": {
+        "message": "Account added successfully!"
+    },
+    "qr_add_failed": {
+        "message": "Failed to add account"
+    },
+    "account_already_exists": {
+        "message": "This account already exists. Please do not add it again."
+    },
+    "edit_account": {
+        "message": "Edit Account"
+    },
+    "save": {
+        "message": "Save"
+    },
+    "zoom_description": {
+        "message": "Adjust interface zoom scale"
+    },
+    "webdav_description": {
+        "message": "Backup to custom server"
+    },
+    "manage_backups": {
+        "message": "Manage Backups",
+        "description": "Manage Backups."
+    },
+    "manage_backups_description": {
+        "message": "Import or export your account data",
+        "description": "Description for manage backups."
+    },
+    "backup_restore_title": {
+        "message": "Backup & Restore",
+        "description": "Title for Import/Export modal."
+    },
+    "tab_export": {
+        "message": "Export Backup",
+        "description": "Export Tab."
+    },
+    "tab_import": {
+        "message": "Import Backup",
+        "description": "Import Tab."
+    },
+    "export_desc": {
+        "message": "Export all accounts as an encrypted backup file",
+        "description": "Export description."
+    },
+    "import_desc": {
+        "message": "Restore accounts from a backup file",
+        "description": "Import description."
+    },
+    "encrypt_password": {
+        "message": "Encryption Password",
+        "description": "Encryption password label."
+    },
+    "decrypt_password": {
+        "message": "Decryption Password",
+        "description": "Decryption password label."
+    },
+    "enter_encrypt_password": {
+        "message": "Enter encryption password",
+        "description": "Placeholder for export password."
+    },
+    "enter_encrypt_password_hint": {
+        "message": "This password is used to encrypt the backup file. Please keep it safe.",
+        "description": "Hint for export password."
+    },
+    "btn_export_file": {
+        "message": "Export Backup File",
+        "description": "Export button text."
+    },
+    "select_file": {
+        "message": "Select Backup File",
+        "description": "Select file label."
+    },
+    "select_file_placeholder": {
+        "message": "Select .json file...",
+        "description": "Placeholder for file input."
+    },
+    "import_warning": {
+        "message": "Importing will merge accounts from the backup file with existing data",
+        "description": "Warning message for import."
+    },
+    "btn_import_file": {
+        "message": "Import Backup",
+        "description": "Import button text."
+    },
+    "export_success": {
+        "message": "Export successful!",
+        "description": "Export success message."
+    },
+    "import_success": {
+        "message": "Successfully imported $1 accounts!",
+        "description": "Import success message."
+    },
+    "webdav_title": {
+        "message": "WebDAV Backup",
+        "description": "WebDAV modal title."
+    },
+    "webdav_desc": {
+        "message": "Backup to your own server (Nextcloud, Nutstore, etc.)",
+        "description": "WebDAV description."
+    },
+    "server_url": {
+        "message": "Server URL",
+        "description": "Server URL label."
+    },
+    "server_url_hint": {
+        "message": "Full WebDAV directory URL",
+        "description": "Hint for server url."
+    },
+    "username": {
+        "message": "Username",
+        "description": "Username label."
+    },
+    "password": {
+        "message": "Password",
+        "description": "Password label."
+    },
+    "auto_backup": {
+        "message": "Enable Auto Backup",
+        "description": "Auto backup toggle."
+    },
+    "backup_frequency": {
+        "message": "Backup Frequency",
+        "description": "Backup frequency label."
+    },
+    "freq_1h": {
+        "message": "Every hour",
+        "description": "Frequency 1 hour."
+    },
+    "freq_6h": {
+        "message": "Every 6 hours",
+        "description": "Frequency 6 hours."
+    },
+    "freq_12h": {
+        "message": "Every 12 hours",
+        "description": "Frequency 12 hours."
+    },
+    "freq_24h": {
+        "message": "Every day",
+        "description": "Frequency 24 hours."
+    },
+    "freq_week": {
+        "message": "Every week",
+        "description": "Frequency 1 week."
+    },
+    "retention_policy": {
+        "message": "Retention Policy",
+        "description": "Retention policy label."
+    },
+    "retain_7d": {
+        "message": "Keep last 7 days",
+        "description": "Retain 7 days."
+    },
+    "retain_30d": {
+        "message": "Keep last 30 days",
+        "description": "Retain 30 days."
+    },
+    "retain_90d": {
+        "message": "Keep last 90 days",
+        "description": "Retain 90 days."
+    },
+    "retain_1y": {
+        "message": "Keep last 1 year",
+        "description": "Retain 1 year."
+    },
+    "retain_forever": {
+        "message": "Keep forever",
+        "description": "Retain forever."
+    },
+    "btn_save_config": {
+        "message": "Save Config",
+        "description": "Save config button."
+    },
+    "btn_backup_now": {
+        "message": "Backup Now",
+        "description": "Backup now button."
+    },
+    "btn_restore_cloud": {
+        "message": "Restore from Cloud",
+        "description": "Restore from cloud button."
+    },
+    "backup_tips_title": {
+        "message": "Common Services",
+        "description": "Backup tips title."
+    },
+    "account_count": {
+        "message": "Accounts",
+        "description": "Account count label."
+    },
+    "export_format": {
+        "message": "Export Format",
+        "description": "Export format label."
+    },
+    "select_restore_backup": {
+        "message": "Select backup to restore:",
+        "description": "Select backup to restore header."
+    },
+    "load_failed": {
+        "message": "Load Failed",
+        "description": "Load failed error."
+    },
+    "config_saved": {
+        "message": "Config Saved!",
+        "description": "Config saved success."
+    },
+    "backup_process": {
+        "message": "Backing up...",
+        "description": "Backing up status."
+    },
+    "restore_process": {
+        "message": "Loading...",
+        "description": "Restoring/Loading status."
+    },
+    "no_accounts_backup": {
+        "message": "No accounts to export",
+        "description": "No accounts to backup error."
+    },
+    "export_failed": {
+        "message": "Export failed: ",
+        "description": "Export failed prefix."
+    },
+    "select_backup_file": {
+        "message": "Please select a backup file",
+        "description": "Select backup file error."
+    },
+    "enter_decrypt_password": {
+        "message": "Please enter decryption password",
+        "description": "Enter decrypt password error."
+    },
+    "decrypt_failed": {
+        "message": "Decryption failed: Incorrect password or corrupted file",
+        "description": "Decryption failed error."
+    },
+    "format_error": {
+        "message": "Invalid backup file format",
+        "description": "Format error."
+    },
+    "import_failed": {
+        "message": "Import failed: ",
+        "description": "Import failed prefix."
+    },
+    "unknown_error": {
+        "message": "Unknown error",
+        "description": "Unknown error."
+    },
+    "decrypt_format_error": {
+        "message": "Invalid format after decryption",
+        "description": "Decrypted data format error."
+    },
+    "configure_webdav_first": {
+        "message": "Please configure WebDAV server first",
+        "description": "Configure WebDAV first error."
+    },
+    "no_backups_found": {
+        "message": "No backup files found",
+        "description": "No backups found error."
+    },
+    "fetch_backups_failed": {
+        "message": "Failed to fetch backup list: ",
+        "description": "Fetch backups failed prefix."
+    },
+    "restore_success": {
+        "message": "Restore successful! Imported $1 separate accounts",
+        "description": "Restore success message."
+    },
+    "restore_failed": {
+        "message": "Restore failed: ",
+        "description": "Restore failed prefix."
+    },
+    "fill_all_fields": {
+        "message": "Please fill in all fields",
+        "description": "Fill all fields error."
+    },
+    "invalid_server_url": {
+        "message": "Please enter a valid server URL",
+        "description": "Invalid server url error."
+    },
+    "unlock_app_first": {
+        "message": "Please unlock the app before configuring WebDAV",
+        "description": "Unlock app first error."
+    },
+    "backup_success": {
+        "message": "Backup successful!",
+        "description": "Backup success message."
+    },
+    "backup_failed": {
+        "message": "Backup failed: ",
+        "description": "Backup failed prefix."
+    },
+    "auth_failed": {
+        "message": "Authentication failed: Please check username and password",
+        "description": "Auth failed error."
+    },
+    "path_error": {
+        "message": "Path error: Invalid server URL or folder does not exist",
+        "description": "Path error."
+    },
+    "conflict_error": {
+        "message": "Conflict: Target folder does not exist",
+        "description": "Conflict error."
+    }
+}

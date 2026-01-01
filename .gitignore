@@ -1,0 +1,76 @@
+# Dependencies
+node_modules/
+
+# Build output
+build/
+dist/
+.output/
+.wxt/
+output/
+wxt/
+chrome/
+firefox/
+edge/
+safari/
+opera/
+release/
+*.zip
+*.crx
+*.xpi
+
+# Legacy build artifacts (if using old build system)
+css/
+view/licenses.html
+
+# Testing and Coverage
+# Note: src/test/ contains test source files and should be committed
+.nyc_output/
+coverage/
+*.log
+
+# System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.idea/
+.vscode/
+.claude/
+CLAUDE.md
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*~
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+.parcel-cache/
+
+# Implementation details & Feature lists
+FEATURES.md
+FEATURES_zh.md
+PROJECT_PLAN.md
+PROJECT_PLAN_zh.md
+
+# Store listing materials (screenshots, descriptions)
+/marketing/

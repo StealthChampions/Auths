@@ -1,0 +1,180 @@
+.notification {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.notification-icon {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.notification-message {
+  font-size: 14px;
+  color: #333;
+}
+
+.notification-success {
+  border-left: 4px solid #4caf50;
+}
+
+.notification-success .notification-icon {
+  color: #4caf50;
+}
+
+.notification-error {
+  border-left: 4px solid #f44336;
+}
+
+.notification-error .notification-icon {
+  color: #f44336;
+}
+
+.notification-info {
+  border-left: 4px solid #2196f3;
+}
+
+.notification-info .notification-icon {
+  color: #2196f3;
+}
+
+/* Toast notification style */
+.notification-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  background: rgba(50, 50, 50, 0.95);
+  color: white;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 10000;
+  animation: toastSlideUp 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  max-width: 280px;
+  text-align: center;
+}
+
+@keyframes toastSlideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Dialog notification style */
+.notification-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  /* Higher than other modals */
+  animation: fadeIn 0.2s ease;
+}
+
+.notification-dialog {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 320px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  position: relative;
+  animation: dialogZoom 0.2s ease;
+}
+
+.notification-dialog-message {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  line-height: 1.5;
+}
+
+.notification-dialog-btn {
+  padding: 10px 32px;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.notification-dialog-btn:hover {
+  opacity: 0.9;
+}
+
+/* Dark mode for dialog */
+[data-theme="dark"] .notification-dialog,
+.theme-dark .notification-dialog {
+  background: #2a2a2a;
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .notification-dialog-message,
+.theme-dark .notification-dialog-message {
+  color: #e0e0e0;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dialogZoom {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

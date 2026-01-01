@@ -1,0 +1,17 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景 & 边框 (stroke-width 16 对应 32px 时的 1px) -->
+  <rect x="8" y="8" width="496" height="496" rx="112" fill="#f1f5f9" stroke="#94a3b8" stroke-width="16"/>
+
+  <!-- 盾牌 -->
+  <path d="M256 80 L400 136 L400 280 C400 368 328 440 256 456 C184 440 112 368 112 280 L112 136 Z"
+        stroke="#0f172a" stroke-width="28" fill="none" stroke-linejoin="round"/>
+
+  <!-- 数字 2 -->
+  <text x="256" y="320"
+        font-family="SF Pro Display, -apple-system, Arial, sans-serif"
+        font-size="200"
+        font-weight="700"
+        fill="#0f172a"
+        align="center"
+        text-anchor="middle">2</text>
+</svg>

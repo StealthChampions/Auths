@@ -1,0 +1,1204 @@
+{
+  "extName": {
+    "message": "Auths",
+    "description": "Extension Name."
+  },
+  "extShortName": {
+    "message": "Auths",
+    "description": "Extension Short Name."
+  },
+  "extDesc": {
+    "message": "安全便捷的两步验证器，轻松管理您的 2FA 验证码",
+    "description": "Extension Description."
+  },
+  "added": {
+    "message": "已添加。",
+    "description": "Added Account."
+  },
+  "errorqr": {
+    "message": "无法识别的QR码。",
+    "description": "QR Error."
+  },
+  "errorsecret": {
+    "message": "无效的密钥",
+    "description": "Secret Error."
+  },
+  "add_code": {
+    "message": "添加账号",
+    "description": "Add account."
+  },
+  "add_qr": {
+    "message": "扫描QR码",
+    "description": "Scan QR Code."
+  },
+  "add_secret": {
+    "message": "手动输入",
+    "description": "Manual Entry."
+  },
+  "migration_fail": {
+    "message": "导入失败。 如果您要从Google Authenticator迁移数据，请从Google Authenticator重新导出数据，然后重试。",
+    "description": "Import migration data failed."
+  },
+  "migration_partly_fail": {
+    "message": "某些帐户数据未成功导入。",
+    "description": "Some migration data is broken."
+  },
+  "close": {
+    "message": "关闭",
+    "description": "Close."
+  },
+  "ok": {
+    "message": "确定",
+    "description": "OK."
+  },
+  "yes": {
+    "message": "是",
+    "description": "Yes."
+  },
+  "no": {
+    "message": "否",
+    "description": "No."
+  },
+  "account": {
+    "message": "账户",
+    "description": "Account."
+  },
+  "accountName": {
+    "message": "用户名",
+    "description": "Account Name."
+  },
+  "issuer": {
+    "message": "签发方",
+    "description": "Issuer."
+  },
+  "secret": {
+    "message": "密钥",
+    "description": "Secret."
+  },
+  "updateSuccess": {
+    "message": "成功。",
+    "description": "Update Success."
+  },
+  "updateFailure": {
+    "message": "失败。",
+    "description": "Update Failure."
+  },
+  "about": {
+    "message": "关于",
+    "description": "About."
+  },
+  "advanced_options": {
+    "message": "高级选项"
+  },
+  "permission_denied": {
+    "message": "权限被拒绝。WebDAV 同步需要访问服务器 URL 的权限。"
+  },
+  "sync_time": {
+    "message": "校准时间"
+  },
+  "sync_time_desc": {
+    "message": "与 Google 服务器校准时间误差"
+  },
+  "syncing": {
+    "message": "正在校准..."
+  },
+  "sync_success": {
+    "message": "时间校准成功。偏差：{offset}秒"
+  },
+  "sync_error": {
+    "message": "时间校准失败"
+  },
+  "settings": {
+    "message": "设置",
+    "description": "Settings."
+  },
+  "security": {
+    "message": "安全",
+    "description": "Security."
+  },
+  "current_phrase": {
+    "message": "当前密码",
+    "description": "Current Passphrase."
+  },
+  "new_phrase": {
+    "message": "新密码",
+    "description": "New Passphrase."
+  },
+  "phrase": {
+    "message": "密码",
+    "description": "Passphrase."
+  },
+  "confirm_phrase": {
+    "message": "确认密码",
+    "description": "Confirm Passphrase."
+  },
+  "confirm_delete": {
+    "message": "您确定要删除此密钥吗？该操作无法撤销。",
+    "description": "Remove entry confirmation"
+  },
+  "confirm_delete_all": {
+    "message": "我明白所有数据都将被删除且不可恢复。",
+    "description": "Message that user is required to acknowledge before clearing all data."
+  },
+  "delete_all": {
+    "message": "重置身份验证器"
+  },
+  "delete_all_warning": {
+    "message": "这将删除所有数据并完全重置身份验证器。 任何已删除的数据都无法恢复！在重置身份验证器之前您应保存备份。"
+  },
+  "security_warning": {
+    "message": "您的账户数据将使用此密码进行加密。如果您忘记了密码没有人能够提供帮助。",
+    "description": "Passphrase Warning."
+  },
+  "update": {
+    "message": "更新",
+    "description": "Update."
+  },
+  "phrase_incorrect": {
+    "message": "部分账户与密码不匹配，您无法添加新账户或者更改密码。请提供正确的密码后重试。",
+    "description": "Passphrase Incorrect."
+  },
+  "phrase_incorrect_export": {
+    "message": "备份文件不会包含无法解密的账号。",
+    "description": "Skip Unable-decripted Data."
+  },
+  "phrase_not_match": {
+    "message": "密码不匹配。",
+    "description": "Passphrase Not Match."
+  },
+  "encrypted": {
+    "message": "已加密",
+    "description": "Encrypted."
+  },
+  "copied": {
+    "message": "已复制",
+    "description": "Copied."
+  },
+  "feedback": {
+    "message": "问题反馈",
+    "description": "Feedback."
+  },
+  "translate": {
+    "message": "参与翻译",
+    "description": "Translate."
+  },
+  "source": {
+    "message": "源代码",
+    "description": "Source Code."
+  },
+  "passphrase_info": {
+    "message": "输入密码以解码账户数据。",
+    "description": "Passphrase Info"
+  },
+  "sync_clock": {
+    "message": "通过Google校准时间",
+    "description": "Sync Clock"
+  },
+  "remember_phrase": {
+    "message": "记住密码",
+    "description": "Remember Passphrase"
+  },
+  "clock_too_far_off": {
+    "message": "注意！您的本地时钟时间差过大，请修正后再进行操作。",
+    "description": "Local Time is Too Far Off"
+  },
+  "remind_backup": {
+    "message": "您是否为账户数据创建了备份？不要等到为时已晚。",
+    "description": "Remind Backup"
+  },
+  "capture_failed": {
+    "message": "捕捉失败，请重载您正在浏览的页面后重试。",
+    "description": "Capture Failed"
+  },
+  "capture_local_file_failed": {
+    "message": "您是否正在尝试从本地文件扫描QR码？ 改为使用导入QR图像备份。",
+    "description": "Import QR image backup instead of scan local image"
+  },
+  "based_on_time": {
+    "message": "基于时间",
+    "description": "Time Based"
+  },
+  "based_on_counter": {
+    "message": "基于计数器",
+    "description": "Counter Based"
+  },
+  "resize_popup_page": {
+    "message": "偏好",
+    "description": "Popup Page Settings"
+  },
+  "scale": {
+    "message": "比例",
+    "description": "Scale"
+  },
+  "export_info": {
+    "message": "警告：所有备份均未加密。想要将账号添加至其他应用？请点击账号右上角隐藏的图标。",
+    "description": "Export menu info text"
+  },
+  "download_backup": {
+    "message": "下载备份文件",
+    "description": "Download backup file."
+  },
+  "import_backup": {
+    "message": "导入备份",
+    "description": "Import backup."
+  },
+  "import_backup_file": {
+    "message": "导入备份文件",
+    "description": "Import backup file."
+  },
+  "import_backup_qr": {
+    "message": "导入 QR 图片备份",
+    "description": "Import qr image backup."
+  },
+  "import_qr_images": {
+    "message": "导入QR码图片",
+    "description": "Import qr images. Shown as add account method."
+  },
+  "import_backup_code": {
+    "message": "导入备份文本",
+    "description": "Import backup code."
+  },
+  "import_otp_urls": {
+    "message": "导入OTP链接",
+    "description": "Import OTP URLs. Shown as add account method."
+  },
+  "import_backup_qr_partly_failed": {
+    "message": "导入成功，但部分二维码无法识别。",
+    "description": "Import successful, but some QR image cannot be recognized."
+  },
+  "import_backup_qr_in_batches": {
+    "message": "您可以同时选择多个文件进行批量导入",
+    "description": "You can select multiple image files to import backup in batches."
+  },
+  "show_all_entries": {
+    "message": "显示全部条目",
+    "description": "Show all entries."
+  },
+  "dropbox_risk": {
+    "message": "警告：备份未加密，您需自担风险。",
+    "description": "Backup risk warning."
+  },
+  "import_error_password": {
+    "message": "您必须提供正确的密码才能导入备份。",
+    "description": "Error password warning when import backups."
+  },
+  "local_passphrase_warning": {
+    "message": "您的密码保存在了本地，请立即通过安全菜单更改密码。",
+    "description": "localStorage password warning."
+  },
+  "remove": {
+    "message": "移除",
+    "description": "Remove password."
+  },
+  "download_enc_backup": {
+    "message": "下载加密备份",
+    "description": "Download Encrypted Backup"
+  },
+  "search": {
+    "message": "搜索",
+    "description": "Search"
+  },
+  "popout": {
+    "message": "独立窗口模式",
+    "description": "Make window turn into persistent popup"
+  },
+  "lock": {
+    "message": "锁定",
+    "description": "Lock accounts"
+  },
+  "edit": {
+    "message": "编辑",
+    "description": "Edit"
+  },
+  "manual_dropbox": {
+    "message": "手动备份",
+    "description": "Manual backup"
+  },
+  "use_autofill": {
+    "message": "启用自动填充",
+    "description": "Use Autofill"
+  },
+  "use_high_contrast": {
+    "message": "使用高对比度",
+    "description": "Use High Contrast"
+  },
+  "theme": {
+    "message": "主题",
+    "description": "Theme"
+  },
+  "theme_light": {
+    "message": "浅色",
+    "description": "Light theme"
+  },
+  "theme_dark": {
+    "message": "深色",
+    "description": "Dark theme"
+  },
+  "theme_simple": {
+    "message": "简约",
+    "description": "Simple theme"
+  },
+  "theme_compact": {
+    "message": "精简视图",
+    "description": "Compact theme"
+  },
+  "theme_high_contrast": {
+    "message": "高对比度",
+    "description": "High Contrast theme"
+  },
+  "theme_flat": {
+    "message": "扁平",
+    "description": "Flat theme"
+  },
+  "theme_violet": {
+    "message": "紫罗兰",
+    "description": "Violet theme"
+  },
+  "theme_emerald": {
+    "message": "翡翠绿",
+    "description": "Emerald theme"
+  },
+  "theme_sunset": {
+    "message": "日落橙",
+    "description": "Sunset theme"
+  },
+  "theme_ocean": {
+    "message": "海洋蓝",
+    "description": "Ocean theme"
+  },
+  "theme_description": {
+    "message": "选择外观主题",
+    "description": "Theme description"
+  },
+  "storage_sync_info": {
+    "message": "自动备份您的数据至第三方服务。",
+    "description": "3rd party backup info"
+  },
+  "browser_sync": {
+    "message": "浏览器数据同步",
+    "description": "Storage location"
+  },
+  "sign_in": {
+    "message": "登录",
+    "description": "Sign in to 3rd party storage services"
+  },
+  "sign_in_business": {
+    "message": "登录 (企业版)",
+    "description": "Sign in to 3rd party storage services"
+  },
+  "onedrive_business_perms": {
+    "message": "为何企业版账户需要更高权限？"
+  },
+  "log_out": {
+    "message": "注销",
+    "description": "Sign out of 3rd party storage services"
+  },
+  "token_revoked": {
+    "message": "连接到您的 $SERVICE$ 账号时出错，请重试。",
+    "description": "Error authenticating to backup service. $SERVICE$ will be replaced with a proper noun (E.g.: 'Google Drive' or 'Dropbox')",
+    "placeholders": {
+      "service": {
+        "content": "$1",
+        "example": "Google Drive"
+      }
+    }
+  },
+  "otp_unsupported_warn": {
+    "message": "您添加了Steam或战网账号，所以备份文件将不会使用标准输出格式。",
+    "description": "Warning if using account that is not supported by standard backup format."
+  },
+  "otp_backup_inform": {
+    "message": "您可以从一些其它的应用中导入备份。",
+    "description": "Info text on import page"
+  },
+  "otp_backup_learn": {
+    "message": "了解更多",
+    "description": "learn more link on import page. Placed after otp_backup_inform"
+  },
+  "loading": {
+    "message": "正在载入..."
+  },
+  "autolock": {
+    "message": "在"
+  },
+  "minutes": {
+    "message": "分钟后自动锁定"
+  },
+  "advanced": {
+    "message": "高级选项"
+  },
+  "period": {
+    "message": "周期"
+  },
+  "type": {
+    "message": "类型"
+  },
+  "invalid": {
+    "message": "无效代码"
+  },
+  "digits": {
+    "message": "位数"
+  },
+  "algorithm": {
+    "message": "算法"
+  },
+  "smart_filter": {
+    "message": "智能过滤器"
+  },
+  "backup": {
+    "message": "备份"
+  },
+  "backup_file_info": {
+    "message": "备份数据到文件。"
+  },
+  "password_policy_default_hint": {
+    "message": "您的密码不符合您组织的安全要求。有关详细信息，请联系组织管理员。"
+  },
+  "advisor": {
+    "message": "建议"
+  },
+  "advisor_insight_password_not_set": {
+    "message": "设置密码以保护您的数据。"
+  },
+  "advisor_insight_auto_lock_not_set": {
+    "message": "启用自动锁定来保护您的数据。"
+  },
+  "advisor_insight_browser_sync_not_enabled": {
+    "message": "浏览器同步已被禁用。启用它以允许跨浏览器的帐户同步。"
+  },
+  "advisor_insight_auto_fill_not_enabled": {
+    "message": "可以启用自动填充以自动将代码填充到网站中。"
+  },
+  "advisor_insight_smart_filter_not_enabled": {
+    "message": "开启智能过滤以便快速访问账户。"
+  },
+  "show_all_insights": {
+    "message": "显示所有见解。"
+  },
+  "no_insight_available": {
+    "message": "没有可供参考的见解，一切看起来都很好！"
+  },
+  "danger": {
+    "message": "危险"
+  },
+  "warning": {
+    "message": "警告"
+  },
+  "info": {
+    "message": "信息"
+  },
+  "dismiss": {
+    "message": "忽略"
+  },
+  "learn_more": {
+    "message": "了解更多"
+  },
+  "enable_context_menu": {
+    "message": "添加到右键菜单"
+  },
+  "no_entires": {
+    "message": "没有可显示的账户。现在添加您的第一个账户。"
+  },
+  "permissions": {
+    "message": "权限管理"
+  },
+  "permission_revoke": {
+    "message": "撤销"
+  },
+  "permission_show_required_permissions": {
+    "message": "显示不可撤销的权限"
+  },
+  "permission_required": {
+    "message": "这是必需的权限，不能撤销。"
+  },
+  "permission_active_tab": {
+    "message": "访问当前标签页以扫描二维码。"
+  },
+  "permission_storage": {
+    "message": "访问浏览器存储以存储帐户数据。"
+  },
+  "permission_identity": {
+    "message": "用以登录第三方存储服务。"
+  },
+  "permission_alarms": {
+    "message": "允许自动锁定功能生效。"
+  },
+  "permission_scripting": {
+    "message": "将脚本注入当前标签页以扫描二维码并允许自动填充功能生效。"
+  },
+  "permission_clipboard_write": {
+    "message": "剪贴板只写权限以当您点击该帐户时复制代码到剪贴板。"
+  },
+  "permission_context_menus": {
+    "message": "将身份验证器添加到右键菜单。"
+  },
+  "permission_sync_clock": {
+    "message": "允许从 Google 同步时间"
+  },
+  "permission_dropbox": {
+    "message": "允许备份到 Dropbox"
+  },
+  "permission_dropbox_cannot_revoke": {
+    "message": "您必须先停用 Dropbox 备份。"
+  },
+  "permission_drive": {
+    "message": "允许备份到 Google Drive。"
+  },
+  "permission_drive_cannot_revoke": {
+    "message": "您必须先停用 Google Drive 备份。"
+  },
+  "permission_onedrive": {
+    "message": "允许备份到 OneDrive。"
+  },
+  "permission_onedrive_cannot_revoke": {
+    "message": "您必须先停用 OneDrive 备份。"
+  },
+  "permission_unknown_permission": {
+    "message": "未知权限。如果您看到此消息，请发送错误报告。"
+  },
+  "phrase_wrong": {
+    "message": "Password incorrect"
+  },
+  "activate_auto_filter": {
+    "message": "警告：智能过滤器会宽松匹配域名到账户。在输入验证码前，请始终确认您在正确的网站上！"
+  },
+  "appName": {
+    "message": "Auths"
+  },
+  "back": {
+    "message": "返回"
+  },
+  "general": {
+    "message": "通用"
+  },
+  "appearance": {
+    "message": "外观"
+  },
+  "theme_default": {
+    "message": "默认"
+  },
+  "zoom": {
+    "message": "缩放"
+  },
+  "features": {
+    "message": "功能"
+  },
+  "enable_autofill": {
+    "message": "启用自动填充"
+  },
+  "autofill_description": {
+    "message": "自动将验证码填充到网站"
+  },
+  "smart_filter_description": {
+    "message": "根据当前网站自动筛选账户"
+  },
+  "context_menu_description": {
+    "message": "将身份验证器添加到浏览器右键菜单"
+  },
+  "password_protection": {
+    "message": "密码保护"
+  },
+  "auto_lock": {
+    "message": "自动锁定"
+  },
+  "disabled": {
+    "message": "禁用"
+  },
+  "minute": {
+    "message": "分钟"
+  },
+  "hour": {
+    "message": "小时"
+  },
+  "auto_lock_description": {
+    "message": "在一段时间不活动后自动锁定扩展"
+  },
+  "reset_password": {
+    "message": "重置密码"
+  },
+  "reset_password_warning": {
+    "message": "这将清除所有数据并重置扩展。此操作无法撤销。"
+  },
+  "reset_password_confirm": {
+    "message": "确定要重置所有数据吗？此操作无法撤销。"
+  },
+  "password_reset": {
+    "message": "所有数据已重置。"
+  },
+  "privacy": {
+    "message": "隐私"
+  },
+  "clear_all_data": {
+    "message": "清除所有数据"
+  },
+  "clear_all_data_warning": {
+    "message": "这将永久删除您的所有账户和设置。"
+  },
+  "clear_all_data_confirm": {
+    "message": "确定要删除所有数据吗？此操作无法撤销。"
+  },
+  "all_data_cleared": {
+    "message": "所有数据已清除。"
+  },
+  "backup_restore": {
+    "message": "备份与恢复"
+  },
+  "backup_description": {
+    "message": "导出或导入您的账户数据"
+  },
+  "version": {
+    "message": "版本"
+  },
+  "developer": {
+    "message": "开发者"
+  },
+  "license": {
+    "message": "许可证"
+  },
+  "github": {
+    "message": "GitHub"
+  },
+  "report_issue": {
+    "message": "报告问题"
+  },
+  "help": {
+    "message": "帮助"
+  },
+  "search_accounts": {
+    "message": "搜索账户..."
+  },
+  "clear": {
+    "message": "清除"
+  },
+  "accounts": {
+    "message": "个账户"
+  },
+  "done": {
+    "message": "完成"
+  },
+  "no_accounts_yet": {
+    "message": "暂无账户"
+  },
+  "tap_to_add": {
+    "message": "点击 + 添加您的第一个账户"
+  },
+  "no_matching_accounts": {
+    "message": "没有匹配的账户"
+  },
+  "try_different_search": {
+    "message": "尝试其他搜索词"
+  },
+  "add_account": {
+    "message": "添加账户"
+  },
+  "account_name": {
+    "message": "账户名称"
+  },
+  "account_name_placeholder": {
+    "message": "例如 Google、GitHub"
+  },
+  "username_optional": {
+    "message": "用户名（可选）"
+  },
+  "username_placeholder": {
+    "message": "例如 user@example.com"
+  },
+  "secret_key": {
+    "message": "密钥"
+  },
+  "secret_key_placeholder": {
+    "message": "输入您的密钥"
+  },
+  "refresh_period": {
+    "message": "刷新周期"
+  },
+  "seconds": {
+    "message": "秒"
+  },
+  "code_length": {
+    "message": "验证码长度"
+  },
+  "please_enter_account_name": {
+    "message": "请输入账户名称"
+  },
+  "please_enter_secret_key": {
+    "message": "请输入密钥"
+  },
+  "invalid_secret_key": {
+    "message": "密钥格式无效"
+  },
+  "add": {
+    "message": "添加"
+  },
+  "scan_qr_code": {
+    "message": "扫描二维码"
+  },
+  "qr_code": {
+    "message": "二维码"
+  },
+  "language": {
+    "message": "语言"
+  },
+  "follow_system": {
+    "message": "跟随系统"
+  },
+  "language_description": {
+    "message": "选择应用显示语言"
+  },
+  "lang_english": {
+    "message": "英语"
+  },
+  "lang_chinese": {
+    "message": "简体中文"
+  },
+  "pin": {
+    "message": "置顶"
+  },
+  "move_up": {
+    "message": "上移",
+    "description": "Tooltip for move up button"
+  },
+  "move_down": {
+    "message": "下移",
+    "description": "Tooltip for move down button"
+  },
+  "unpin": {
+    "message": "取消置顶"
+  },
+  "delete": {
+    "message": "删除"
+  },
+  "delete_confirm": {
+    "message": "确定要删除 {name} 吗？"
+  },
+  "counter": {
+    "message": "计数器"
+  },
+  "password_setup": {
+    "message": "设置密码"
+  },
+  "password_setup_description": {
+    "message": "创建密码以保护您的账户"
+  },
+  "create_password": {
+    "message": "创建密码"
+  },
+  "confirm_password": {
+    "message": "确认密码"
+  },
+  "set_password": {
+    "message": "设置密码"
+  },
+  "skip": {
+    "message": "跳过"
+  },
+  "password_mismatch": {
+    "message": "密码不匹配"
+  },
+  "password_setup_failed": {
+    "message": "设置密码失败"
+  },
+  "unlock": {
+    "message": "解锁"
+  },
+  "enter_password": {
+    "message": "输入您的密码"
+  },
+  "forgot_password": {
+    "message": "忘记密码？"
+  },
+  "forgot_password_confirm": {
+    "message": "这将重置所有数据。确定吗？"
+  },
+  "too_many_attempts": {
+    "message": "尝试次数过多，请稍后再试。"
+  },
+  "qr_scanner_description": {
+    "message": "在当前网页上框选二维码区域或上传图片文件。"
+  },
+  "qr_capture_screen": {
+    "message": "截取屏幕"
+  },
+  "qr_capture_screen_desc": {
+    "message": "从当前网页扫描二维码"
+  },
+  "qr_upload_image": {
+    "message": "上传图片"
+  },
+  "qr_upload_image_desc": {
+    "message": "选择二维码图片文件"
+  },
+  "qr_error_not_otp_url": {
+    "message": "此二维码不是有效的验证器码。需要 otpauth:// 格式的 URL。"
+  },
+  "qr_error_unsupported_type": {
+    "message": "不支持的 OTP 类型。仅支持 TOTP 和 HOTP。"
+  },
+  "qr_error_no_secret": {
+    "message": "二维码中未找到密钥。"
+  },
+  "qr_error_invalid_secret": {
+    "message": "密钥格式无效。必须是 Base32 编码。"
+  },
+  "qr_error_invalid_period": {
+    "message": "刷新周期无效。必须在 1 到 300 秒之间。"
+  },
+  "qr_error_invalid_digits": {
+    "message": "验证码长度无效。必须在 4 到 10 位之间。"
+  },
+  "qr_error_parse_failed": {
+    "message": "无法解析二维码数据。"
+  },
+  "qr_error_unknown": {
+    "message": "扫描时发生未知错误。"
+  },
+  "qr_error_no_active_tab": {
+    "message": "未找到活动标签页。请重试。"
+  },
+  "qr_error_capture_permission": {
+    "message": "权限被拒绝。请允许屏幕截取权限。"
+  },
+  "qr_error_capture_failed": {
+    "message": "屏幕截取失败。请重试。"
+  },
+  "qr_error_canvas_unavailable": {
+    "message": "Canvas 不可用。请重试。"
+  },
+  "qr_error_not_found": {
+    "message": "图片中未找到二维码。请确保二维码清晰可见。"
+  },
+  "qr_error_image_load_failed": {
+    "message": "图片加载失败。请尝试其他文件。"
+  },
+  "qr_error_not_image": {
+    "message": "所选文件不是图片。请选择图片文件。"
+  },
+  "qr_error_file_too_large": {
+    "message": "文件过大。最大支持 10MB。"
+  },
+  "qr_error_file_read_failed": {
+    "message": "文件读取失败。请重试。"
+  },
+  "qr_unknown_issuer": {
+    "message": "未知"
+  },
+  "qr_select_region": {
+    "message": "框选区域"
+  },
+  "qr_select_region_desc": {
+    "message": "在页面上拖动鼠标框选二维码区域"
+  },
+  "qr_region_instruction": {
+    "message": "拖动鼠标框选二维码区域，按 ESC 取消。"
+  },
+  "qr_error_restricted_page": {
+    "message": "无法在此页面扫描，请在普通网页上尝试。"
+  },
+  "qr_error_selection_too_small": {
+    "message": "选择区域太小，请选择更大的区域。"
+  },
+  "qr_error_connection_failed": {
+    "message": "无法连接到页面，请刷新页面后重试。"
+  },
+  "account_added_successfully": {
+    "message": "账户添加成功！"
+  },
+  "qr_add_failed": {
+    "message": "添加账户失败"
+  },
+  "account_already_exists": {
+    "message": "该账户已存在，请勿重复添加。"
+  },
+  "edit_account": {
+    "message": "编辑账户"
+  },
+  "save": {
+    "message": "保存"
+  },
+  "zoom_description": {
+    "message": "调整界面缩放比例"
+  },
+  "webdav_description": {
+    "message": "自定义服务器备份"
+  },
+  "manage_backups": {
+    "message": "管理备份",
+    "description": "Manage Backups."
+  },
+  "manage_backups_description": {
+    "message": "导入或导出您的账户数据",
+    "description": "Description for manage backups."
+  },
+  "backup_restore_title": {
+    "message": "数据备份与恢复",
+    "description": "Title for Import/Export modal."
+  },
+  "tab_export": {
+    "message": "导出备份",
+    "description": "Export Tab."
+  },
+  "tab_import": {
+    "message": "导入备份",
+    "description": "Import Tab."
+  },
+  "export_desc": {
+    "message": "将所有账户导出为加密的备份文件",
+    "description": "Export description."
+  },
+  "import_desc": {
+    "message": "从备份文件恢复账户数据",
+    "description": "Import description."
+  },
+  "encrypt_password": {
+    "message": "加密密码",
+    "description": "Encryption password label."
+  },
+  "decrypt_password": {
+    "message": "解密密码",
+    "description": "Decryption password label."
+  },
+  "enter_encrypt_password": {
+    "message": "请输入加密密码",
+    "description": "Placeholder for export password."
+  },
+  "enter_encrypt_password_hint": {
+    "message": "此密码用于加密导出的备份文件，请妥善保管",
+    "description": "Hint for export password."
+  },
+  "btn_export_file": {
+    "message": "导出备份文件",
+    "description": "Export button text."
+  },
+  "select_file": {
+    "message": "选择备份文件",
+    "description": "Select file label."
+  },
+  "select_file_placeholder": {
+    "message": "选择 .json 文件...",
+    "description": "Placeholder for file input."
+  },
+  "import_warning": {
+    "message": "导入将合并备份文件中的账户到现有数据",
+    "description": "Warning message for import."
+  },
+  "btn_import_file": {
+    "message": "导入备份",
+    "description": "Import button text."
+  },
+  "export_success": {
+    "message": "导出成功！",
+    "description": "Export success message."
+  },
+  "import_success": {
+    "message": "成功导入 $1 个账户！",
+    "description": "Import success message."
+  },
+  "webdav_title": {
+    "message": "WebDAV 备份",
+    "description": "WebDAV modal title."
+  },
+  "webdav_desc": {
+    "message": "连接到自建服务器进行备份（支持 Nextcloud、坚果云等）",
+    "description": "WebDAV description."
+  },
+  "server_url": {
+    "message": "服务器地址",
+    "description": "Server URL label."
+  },
+  "server_url_hint": {
+    "message": "完整的 WebDAV 目录地址",
+    "description": "Hint for server url."
+  },
+  "username": {
+    "message": "用户名",
+    "description": "Username label."
+  },
+  "password": {
+    "message": "密码",
+    "description": "Password label."
+  },
+  "auto_backup": {
+    "message": "开启自动备份",
+    "description": "Auto backup toggle."
+  },
+  "backup_frequency": {
+    "message": "备份频率",
+    "description": "Backup frequency label."
+  },
+  "freq_1h": {
+    "message": "每小时",
+    "description": "Frequency 1 hour."
+  },
+  "freq_6h": {
+    "message": "每6小时",
+    "description": "Frequency 6 hours."
+  },
+  "freq_12h": {
+    "message": "每12小时",
+    "description": "Frequency 12 hours."
+  },
+  "freq_24h": {
+    "message": "每天",
+    "description": "Frequency 24 hours."
+  },
+  "freq_week": {
+    "message": "每周",
+    "description": "Frequency 1 week."
+  },
+  "retention_policy": {
+    "message": "保留策略",
+    "description": "Retention policy label."
+  },
+  "retain_7d": {
+    "message": "保留最近 7 天",
+    "description": "Retain 7 days."
+  },
+  "retain_30d": {
+    "message": "保留最近 30 天",
+    "description": "Retain 30 days."
+  },
+  "retain_90d": {
+    "message": "保留最近 90 天",
+    "description": "Retain 90 days."
+  },
+  "retain_1y": {
+    "message": "保留最近 1 年",
+    "description": "Retain 1 year."
+  },
+  "retain_forever": {
+    "message": "永久保留",
+    "description": "Retain forever."
+  },
+  "btn_save_config": {
+    "message": "保存配置",
+    "description": "Save config button."
+  },
+  "btn_backup_now": {
+    "message": "立即备份",
+    "description": "Backup now button."
+  },
+  "btn_restore_cloud": {
+    "message": "从云端恢复",
+    "description": "Restore from cloud button."
+  },
+  "backup_tips_title": {
+    "message": "常用服务配置",
+    "description": "Backup tips title."
+  },
+  "account_count": {
+    "message": "账户数量",
+    "description": "Account count label."
+  },
+  "export_format": {
+    "message": "导出格式",
+    "description": "Export format label."
+  },
+  "select_restore_backup": {
+    "message": "选择要恢复的备份：",
+    "description": "Select backup to restore header."
+  },
+  "load_failed": {
+    "message": "加载失败",
+    "description": "Load failed error."
+  },
+  "config_saved": {
+    "message": "配置已保存！",
+    "description": "Config saved success."
+  },
+  "backup_process": {
+    "message": "备份中...",
+    "description": "Backing up status."
+  },
+  "restore_process": {
+    "message": "加载中...",
+    "description": "Restoring/Loading status."
+  },
+  "no_accounts_backup": {
+    "message": "没有可导出的账户",
+    "description": "No accounts to backup error."
+  },
+  "export_failed": {
+    "message": "导出失败: ",
+    "description": "Export failed prefix."
+  },
+  "select_backup_file": {
+    "message": "请选择备份文件",
+    "description": "Select backup file error."
+  },
+  "enter_decrypt_password": {
+    "message": "请输入解密密码",
+    "description": "Enter decrypt password error."
+  },
+  "decrypt_failed": {
+    "message": "解密失败：密码错误或文件损坏",
+    "description": "Decryption failed error."
+  },
+  "format_error": {
+    "message": "备份文件格式不正确",
+    "description": "Format error."
+  },
+  "import_failed": {
+    "message": "导入失败: ",
+    "description": "Import failed prefix."
+  },
+  "unknown_error": {
+    "message": "未知错误",
+    "description": "Unknown error."
+  },
+  "decrypt_format_error": {
+    "message": "解密后数据格式错误",
+    "description": "Decrypted data format error."
+  },
+  "configure_webdav_first": {
+    "message": "请先配置 WebDAV 服务器",
+    "description": "Configure WebDAV first error."
+  },
+  "no_backups_found": {
+    "message": "未找到备份文件",
+    "description": "No backups found error."
+  },
+  "fetch_backups_failed": {
+    "message": "获取备份列表失败: ",
+    "description": "Fetch backups failed prefix."
+  },
+  "restore_success": {
+    "message": "恢复成功！导入了 $1 个新账户",
+    "description": "Restore success message."
+  },
+  "restore_failed": {
+    "message": "恢复失败: ",
+    "description": "Restore failed prefix."
+  },
+  "fill_all_fields": {
+    "message": "请填写所有字段",
+    "description": "Fill all fields error."
+  },
+  "invalid_server_url": {
+    "message": "请输入有效的服务器地址",
+    "description": "Invalid server url error."
+  },
+  "unlock_app_first": {
+    "message": "请先解锁应用后再配置 WebDAV",
+    "description": "Unlock app first error."
+  },
+  "backup_success": {
+    "message": "备份成功！",
+    "description": "Backup success message."
+  },
+  "backup_failed": {
+    "message": "备份失败: ",
+    "description": "Backup failed prefix."
+  },
+  "auth_failed": {
+    "message": "认证失败：请检查用户名和密码",
+    "description": "Auth failed error."
+  },
+  "path_error": {
+    "message": "路径错误：服务器地址不正确或文件夹不存在",
+    "description": "Path error."
+  },
+  "conflict_error": {
+    "message": "冲突：目标文件夹不存在",
+    "description": "Conflict error."
+  }
+}
