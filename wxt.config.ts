@@ -36,6 +36,17 @@ export default defineConfig({
       autofill: {
         description: 'Autofill the matched code'
       }
+    },
+    // Firefox-specific settings | Firefox 特定设置
+    browser_specific_settings: {
+      gecko: {
+        id: 'auths@anthropic.com',
+        strict_min_version: '109.0',
+        // @ts-expect-error - Firefox requires this for new extensions
+        data_collection_permissions: {
+          required: ['none']
+        }
+      }
     }
   },
   vite: () => ({
