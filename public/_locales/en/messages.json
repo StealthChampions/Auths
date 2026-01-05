@@ -1200,5 +1200,9 @@
     "conflict_error": {
         "message": "Conflict: Target folder does not exist",
         "description": "Conflict error."
+    },
+    "clear_failed": {
+        "message": "Failed to clear data",
+        "description": "Clear data failed error."
     }
 }

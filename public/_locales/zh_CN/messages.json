@@ -1200,5 +1200,9 @@
   "conflict_error": {
     "message": "冲突：目标文件夹不存在",
     "description": "Conflict error."
+  },
+  "clear_failed": {
+    "message": "清除数据失败",
+    "description": "Clear data failed error."
   }
 }

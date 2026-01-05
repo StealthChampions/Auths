@@ -175,10 +175,29 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             const existingAccounts = result.entries || [];
             const mergedAccounts = [...existingAccounts];
 
+            // Collect all existing hashes to check for duplicates
+            // 收集所有现有的 hash 以检查重复
+            const existingHashes = new Set(mergedAccounts.map((a: any) => a.hash).filter(Boolean));
+
+            // Helper function to generate unique hash
+            // 生成唯一 hash 的辅助函数
+            const generateHash = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+
             let importCount = 0;
             for (const account of backupData.accounts) {
-                const exists = mergedAccounts.find((a: any) => a.hash === account.hash);
+                // Ensure account has a unique hash
+                // 确保账户有唯一的 hash
+                let accountHash = account.hash;
+                if (!accountHash || existingHashes.has(accountHash)) {
+                    // Generate new hash if missing or duplicate
+                    // 如果缺失或重复则生成新 hash
+                    accountHash = generateHash();
+                    account.hash = accountHash;
+                }
+
+                const exists = mergedAccounts.find((a: any) => a.hash === accountHash);
                 if (!exists) {
+                    existingHashes.add(accountHash);
                     mergedAccounts.push(account);
                     importCount++;
                 }
@@ -212,6 +231,18 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             showToast('error', t('invalid_server_url'));
             return;
         }
+
+        // Save form data BEFORE requesting permission to prevent data loss
+        // 在请求权限之前保存表单数据，防止数据丢失
+        const tempConfig = {
+            serverUrl,
+            username,
+            password,
+            autoBackup,
+            backupInterval: parseInt(backupInterval),
+            retentionDays
+        };
+        await chrome.storage.local.set({ webdavConfig: tempConfig });
 
         // Request permission for WebDAV server | 请求 WebDAV 服务器访问权限
         if (!await ensureWebDAVPermission(serverUrl)) {
@@ -286,7 +317,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                 accounts: entries
             };
 
-            const now = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            const now = new Date().toISOString().slice(0, 10);
             const filename = `auths-backup-${now}.json`;
             const uploadUrl = serverUrl.endsWith('/')
                 ? `${serverUrl}${filename}`
