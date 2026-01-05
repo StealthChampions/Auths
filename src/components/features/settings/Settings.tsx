@@ -9,7 +9,7 @@
  */
 
 import React, { useState } from 'react';
-import { useMenu, useNotification } from '@/store';
+import { useMenu, useNotification, useAccounts } from '@/store';
 import { syncTimeWithGoogle } from '@/models/syncTime';
 import { useI18n } from '@/i18n';
 import { UserSettings } from '@/models/settings';
@@ -64,6 +64,25 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   const [activeSection, setActiveSection] = useState<'general' | 'backup' | 'about'>('general');
   const [isSyncing, setIsSyncing] = useState(false);
   const { dispatch: notificationDispatch } = useNotification();
+  const { dispatch: accountsDispatch } = useAccounts();
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  // Handle clear all data | 处理清除所有数据
+  const handleClearAllData = async () => {
+    try {
+      // Clear all entries from storage | 清除存储中的所有条目
+      await chrome.storage.local.remove(['entries', 'webdavConfig']);
+      // Update global state | 更新全局状态
+      accountsDispatch({ type: 'setEntries', payload: [] });
+      // Close confirm dialog | 关闭确认对话框
+      setShowClearConfirm(false);
+      // Show success notification | 显示成功通知
+      notificationDispatch({ type: 'success', payload: t('all_data_cleared') });
+    } catch {
+      notificationDispatch({ type: 'error', payload: t('clear_failed') });
+    }
+  };
+
 
 
   const handleThemeChange = (theme: string) => {
@@ -296,6 +315,33 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 </div>
               </div>
             </div>
+
+            {/* Entry 3: Clear All Data | 一键清除数据 */}
+            <div className="setting-item" style={{ marginTop: '24px' }}>
+              <div
+                className="backup-card danger-card"
+                onClick={() => setShowClearConfirm(true)}
+                role="button"
+                tabIndex={0}
+                style={{
+                  borderColor: 'var(--color-danger, #ef4444)',
+                  backgroundColor: 'rgba(239, 68, 68, 0.05)'
+                }}
+              >
+                <div className="backup-icon-wrapper" style={{ color: 'var(--color-danger, #ef4444)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <div className="backup-content">
+                  <div className="backup-title" style={{ color: 'var(--color-danger, #ef4444)' }}>{t('clear_all_data')}</div>
+                  <p className="setting-description">
+                    {t('clear_all_data_warning')}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -344,6 +390,88 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
 
       {showWebDAV && (
         <WebDAV onClose={() => setShowWebDAV(false)} />
+      )}
+
+      {/* Clear All Data Confirmation Dialog | 清除数据确认对话框 */}
+      {showClearConfirm && (
+        <div className="modal-overlay" onClick={() => setShowClearConfirm(false)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '320px',
+              padding: '24px',
+              textAlign: 'center'
+            }}
+          >
+            {/* Warning Icon | 警告图标 */}
+            <div style={{
+              width: '64px',
+              height: '64px',
+              margin: '0 auto 16px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="32" height="32" style={{ color: '#ef4444' }}>
+                <path d="M12 9v4M12 17h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+
+            {/* Title | 标题 */}
+            <h3 style={{
+              margin: '0 0 8px',
+              fontSize: '18px',
+              fontWeight: '600',
+              color: 'var(--color-text-primary)'
+            }}>
+              {t('clear_all_data')}
+            </h3>
+
+            {/* Warning Message | 警告信息 */}
+            <p style={{
+              margin: '0 0 24px',
+              fontSize: '14px',
+              color: 'var(--color-text-secondary)',
+              lineHeight: '1.5'
+            }}>
+              {t('clear_all_data_confirm')}
+            </p>
+
+            {/* Buttons | 按钮 */}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                className="btn-secondary"
+                onClick={() => setShowClearConfirm(false)}
+                style={{ flex: 1 }}
+              >
+                {t('no')}
+              </button>
+              <button
+                onClick={handleClearAllData}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+              >
+                {t('yes')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

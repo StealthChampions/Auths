@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useBackup } from '@/store';
+import { useBackup, useNotification, useAccounts } from '@/store';
 import { useI18n } from '@/i18n';
 import { SecureHash } from '@/models/encryption';
 
@@ -19,10 +19,16 @@ export default function ImportExport({ onClose }: ImportExportProps) {
   const [exportPassword, setExportPassword] = useState('');
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPassword, setImportPassword] = useState('');
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [accountCount, setAccountCount] = useState(0);
   const { dispatch } = useBackup();
+  const { dispatch: notificationDispatch } = useNotification();
+  const { dispatch: accountsDispatch } = useAccounts();
   const { t } = useI18n();
+
+  // Helper function to show toast | 显示 Toast 的辅助函数
+  const showToast = (type: 'success' | 'error', text: string) => {
+    notificationDispatch({ type, payload: text });
+  };
 
   // Load account count on mount
   useEffect(() => {
@@ -36,33 +42,38 @@ export default function ImportExport({ onClose }: ImportExportProps) {
 
   const handleExport = async () => {
     try {
-      setMessage(null);
-
-      if (!exportPassword) {
-        setMessage({ type: 'error', text: t('enter_encrypt_password') });
-        return;
-      }
-
       // Get all accounts from storage
       const result = await chrome.storage.local.get(['entries']);
       const accounts = result.entries || [];
 
       if (accounts.length === 0) {
-        setMessage({ type: 'error', text: t('no_accounts_backup') });
+        showToast('error', t('no_accounts_backup'));
         return;
       }
 
-      // Encrypt the accounts data
-      const accountsJson = JSON.stringify(accounts);
-      const encryptedData = SecureHash.encryptData(accountsJson, exportPassword);
+      let backupData;
 
-      // Create backup data with encryption marker
-      const backupData = {
-        version: '1.0',
-        timestamp: Date.now(),
-        encrypted: true,
-        data: encryptedData
-      };
+      if (exportPassword) {
+        // Encrypt the accounts data if password provided
+        // 如果提供了密码则加密数据
+        const accountsJson = JSON.stringify(accounts);
+        const encryptedData = SecureHash.encryptData(accountsJson, exportPassword);
+
+        backupData = {
+          version: '1.0',
+          timestamp: Date.now(),
+          encrypted: true,
+          data: encryptedData
+        };
+      } else {
+        // Export unencrypted if no password | 如果没有密码则导出未加密的
+        backupData = {
+          version: '1.0',
+          timestamp: Date.now(),
+          encrypted: false,
+          accounts: accounts
+        };
+      }
 
       // Create download
       const dataStr = JSON.stringify(backupData, null, 2);
@@ -74,25 +85,18 @@ export default function ImportExport({ onClose }: ImportExportProps) {
       link.click();
       URL.revokeObjectURL(url);
 
-      setMessage({ type: 'success', text: t('export_success') });
+      showToast('success', t('export_success'));
       setExportPassword('');
     } catch (err) {
       console.error('Export failed:', err);
-      setMessage({ type: 'error', text: t('export_failed') + (err instanceof Error ? err.message : t('unknown_error')) });
+      showToast('error', t('export_failed') + (err instanceof Error ? err.message : t('unknown_error')));
     }
   };
 
   const handleImport = async () => {
     try {
-      setMessage(null);
-
       if (!importFile) {
-        setMessage({ type: 'error', text: t('select_backup_file') });
-        return;
-      }
-
-      if (!importPassword) {
-        setMessage({ type: 'error', text: t('enter_decrypt_password') });
+        showToast('error', t('select_backup_file'));
         return;
       }
 
@@ -103,28 +107,33 @@ export default function ImportExport({ onClose }: ImportExportProps) {
       // Check if file is encrypted (new format) or plain (legacy)
       let accounts;
       if (backupData.encrypted && backupData.data) {
+        // Encrypted file requires password | 加密文件需要密码
+        if (!importPassword) {
+          showToast('error', t('enter_decrypt_password'));
+          return;
+        }
         // Decrypt the data
         const decryptedJson = SecureHash.decryptData(backupData.data, importPassword);
         if (!decryptedJson) {
-          setMessage({ type: 'error', text: t('decrypt_failed') });
+          showToast('error', t('decrypt_failed'));
           return;
         }
         try {
           accounts = JSON.parse(decryptedJson);
         } catch {
-          setMessage({ type: 'error', text: t('decrypt_format_error') });
+          showToast('error', t('decrypt_format_error'));
           return;
         }
       } else if (backupData.accounts) {
-        // Legacy unencrypted format
+        // Unencrypted format (no password needed) | 未加密格式（不需要密码）
         accounts = backupData.accounts;
       } else {
-        setMessage({ type: 'error', text: t('format_error') });
+        showToast('error', t('format_error'));
         return;
       }
 
       if (!Array.isArray(accounts)) {
-        setMessage({ type: 'error', text: t('format_error') });
+        showToast('error', t('format_error'));
         return;
       }
 
@@ -144,12 +153,15 @@ export default function ImportExport({ onClose }: ImportExportProps) {
 
       await chrome.storage.local.set({ entries: mergedAccounts });
 
-      setMessage({ type: 'success', text: t('import_success', [importCount.toString()]) });
+      // Update global state immediately | 立即更新全局状态
+      accountsDispatch({ type: 'setEntries', payload: mergedAccounts });
+
+      showToast('success', t('import_success', [importCount.toString()]));
       setImportFile(null);
       setImportPassword('');
     } catch (err) {
       console.error('Import failed:', err);
-      setMessage({ type: 'error', text: t('import_failed') + (err instanceof Error ? err.message : t('unknown_error')) });
+      showToast('error', t('import_failed') + (err instanceof Error ? err.message : t('unknown_error')));
     }
   };
 
@@ -212,7 +224,6 @@ export default function ImportExport({ onClose }: ImportExportProps) {
             <button
               className="btn-primary btn-full"
               onClick={handleExport}
-              disabled={!exportPassword}
             >
               📥 {t('btn_export_file')}
             </button>
@@ -256,18 +267,14 @@ export default function ImportExport({ onClose }: ImportExportProps) {
             <button
               className="btn-primary btn-full"
               onClick={handleImport}
-              disabled={!importFile || !importPassword}
+              disabled={!importFile}
             >
               📤 {t('btn_import_file')}
             </button>
           </div>
         )}
 
-        {message && (
-          <div className={`message ${message.type}`}>
-            {message.text}
-          </div>
-        )}
+
       </div>
     </div>
   );
