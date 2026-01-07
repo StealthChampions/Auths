@@ -15,6 +15,7 @@ import { useI18n } from '@/i18n';
 import { UserSettings } from '@/models/settings';
 import { KeyUtilities } from '@/models/key-utilities';
 import { OTPType, OTPAlgorithm } from '@/models/otp';
+import { getIconUrl } from '@/utils/icon-map';
 import qrcode from 'qrcode-generator';
 
 // SVG Icons | SVG 图标
@@ -51,75 +52,7 @@ const ServiceIcon = ({ issuer, account, icon }: { issuer: string; account: strin
     return <img src={icon} alt={issuer} className="service-icon" onError={() => setError(true)} />;
   }
 
-  const getIconUrl = (issuer: string) => {
-    const domainMap: Record<string, string> = {
-      'google': 'google.com',
-      'github': 'github.com',
-      'facebook': 'facebook.com',
-      'twitter': 'twitter.com',
-      'discord': 'discord.com',
-      'microsoft': 'microsoft.com',
-      'amazon': 'amazon.com',
-      'apple': 'apple.com',
-      'binance': 'binance.com',
-      'coinbase': 'coinbase.com',
-      'dropbox': 'dropbox.com',
-      'slack': 'slack.com',
-      'telegram': 'telegram.org',
-      'kraken': 'kraken.com',
-      'epic': 'epicgames.com',
-      'steam': 'steampowered.com',
-      'ubisoft': 'ubisoft.com',
-      'blizzard': 'blizzard.com',
-      'battle.net': 'battle.net',
-      'proton': 'proton.me',
-      'outlook': 'outlook.com',
-      'adobe': 'adobe.com',
-      'digitalocean': 'digitalocean.com',
-      'bitwarden': 'bitwarden.com',
-      'cloudflare': 'cloudflare.com',
-      'aws': 'aws.amazon.com',
-      'gitlab': 'gitlab.com',
-      'bitbucket': 'bitbucket.org',
-      'namecheap': 'namecheap.com',
-      'godaddy': 'godaddy.com',
-      'stripe': 'stripe.com',
-      'paypal': 'paypal.com',
-      'linkedin': 'linkedin.com',
-      'reddit': 'reddit.com',
-      'twitch': 'twitch.tv',
-      'nintendo': 'nintendo.com',
-      'playstation': 'playstation.com',
-      'xbox': 'xbox.com',
-      'ea': 'ea.com',
-      'openai': 'openai.com',
-      'heroku': 'heroku.com',
-      'instagram': 'instagram.com',
-      'jetbrains': 'jetbrains.com',
-      'lastpass': 'lastpass.com',
-      'mega': 'mega.nz',
-      'vultr': 'vultr.com',
-      'unity': 'unity.com',
-      'postman': 'postman.com',
-      'npm': 'npmjs.com',
-      'notion': 'notion.so',
-      'wise': 'wise.com',
-    };
-
-    const lowerIssuer = (issuer || '').toLowerCase();
-    // First try exact match
-    if (domainMap[lowerIssuer]) {
-      return domainMap[lowerIssuer];
-    }
-    // Then try prefix/contains match for longer keys first (sorted by length desc)
-    const sortedKeys = Object.keys(domainMap).sort((a, b) => b.length - a.length);
-    for (const key of sortedKeys) {
-      if (lowerIssuer.includes(key)) return domainMap[key];
-    }
-    return null;
-  };
-
-  const domain = getIconUrl(issuer);
+  const domain = getIconUrl(issuer, account);
   if (domain && !error) {
     return (
       <img
@@ -131,7 +64,7 @@ const ServiceIcon = ({ issuer, account, icon }: { issuer: string; account: strin
     );
   }
 
-  const initial = (account || issuer || '?').charAt(0).toUpperCase();
+  const initial = (issuer || account || '?').charAt(0).toUpperCase();
   return <div className="service-icon-placeholder">{initial}</div>;
 };
 
