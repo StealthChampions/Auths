@@ -1025,6 +1025,10 @@
         "message": "Backup Frequency",
         "description": "Backup frequency label."
     },
+    "freq_30m": {
+        "message": "Every half hour",
+        "description": "Frequency 30 minutes."
+    },
     "freq_1h": {
         "message": "Every hour",
         "description": "Frequency 1 hour."
@@ -1204,5 +1208,93 @@
     "clear_failed": {
         "message": "Failed to clear data",
         "description": "Clear data failed error."
+    },
+    "view_sync_logs": {
+        "message": "View Sync Logs",
+        "description": "Button to view sync logs."
+    },
+    "sync_logs_title": {
+        "message": "Sync Logs",
+        "description": "Title of sync logs section."
+    },
+    "clear_logs": {
+        "message": "Clear Logs",
+        "description": "Button to clear sync logs."
+    },
+    "logs_cleared": {
+        "message": "Logs cleared",
+        "description": "Message shown after clearing logs."
+    },
+    "no_sync_logs": {
+        "message": "No sync logs yet",
+        "description": "Message when no sync logs exist."
+    },
+    "log_backup_start": {
+        "message": "Starting backup...",
+        "description": "Log message for backup start."
+    },
+    "log_backup_success": {
+        "message": "Backup completed successfully",
+        "description": "Log message for backup success."
+    },
+    "log_backup_failed": {
+        "message": "Backup failed",
+        "description": "Log message for backup failure."
+    },
+    "log_restore_start": {
+        "message": "Starting restore...",
+        "description": "Log message for restore start."
+    },
+    "log_restore_success": {
+        "message": "Restore completed successfully",
+        "description": "Log message for restore success."
+    },
+    "log_restore_failed": {
+        "message": "Restore failed",
+        "description": "Log message for restore failure."
+    },
+    "log_config_saved": {
+        "message": "Configuration saved",
+        "description": "Log message for config saved."
+    },
+    "log_auto_backup": {
+        "message": "Auto backup triggered",
+        "description": "Log message for auto backup trigger."
+    },
+    "sync_button": {
+        "message": "Sync",
+        "description": "Sync button text."
+    },
+    "sync_checking": {
+        "message": "Checking...",
+        "description": "Sync checking status."
+    },
+    "sync_up_to_date": {
+        "message": "Already up to date",
+        "description": "Sync up to date message."
+    },
+    "sync_downloading": {
+        "message": "Remote is newer, downloading...",
+        "description": "Sync downloading message."
+    },
+    "sync_uploading": {
+        "message": "Local is newer, uploading...",
+        "description": "Sync uploading message."
+    },
+    "sync_complete": {
+        "message": "Sync complete",
+        "description": "Sync complete message."
+    },
+    "sync_failed": {
+        "message": "Sync failed: ",
+        "description": "Sync failed prefix."
+    },
+    "sync_on_startup": {
+        "message": "Sync on Startup",
+        "description": "Sync on startup toggle."
+    },
+    "sync_skipped_no_changes": {
+        "message": "No changes, sync skipped",
+        "description": "Sync skipped message."
     }
 }

@@ -1025,6 +1025,10 @@
     "message": "备份频率",
     "description": "Backup frequency label."
   },
+  "freq_30m": {
+    "message": "每半小时",
+    "description": "Frequency 30 minutes."
+  },
   "freq_1h": {
     "message": "每小时",
     "description": "Frequency 1 hour."
@@ -1204,5 +1208,93 @@
   "clear_failed": {
     "message": "清除数据失败",
     "description": "Clear data failed error."
+  },
+  "view_sync_logs": {
+    "message": "查看同步日志",
+    "description": "Button to view sync logs."
+  },
+  "sync_logs_title": {
+    "message": "同步日志",
+    "description": "Title of sync logs section."
+  },
+  "clear_logs": {
+    "message": "清除日志",
+    "description": "Button to clear sync logs."
+  },
+  "logs_cleared": {
+    "message": "日志已清除",
+    "description": "Message shown after clearing logs."
+  },
+  "no_sync_logs": {
+    "message": "暂无同步日志",
+    "description": "Message when no sync logs exist."
+  },
+  "log_backup_start": {
+    "message": "开始备份...",
+    "description": "Log message for backup start."
+  },
+  "log_backup_success": {
+    "message": "备份成功完成",
+    "description": "Log message for backup success."
+  },
+  "log_backup_failed": {
+    "message": "备份失败",
+    "description": "Log message for backup failure."
+  },
+  "log_restore_start": {
+    "message": "开始恢复...",
+    "description": "Log message for restore start."
+  },
+  "log_restore_success": {
+    "message": "恢复成功完成",
+    "description": "Log message for restore success."
+  },
+  "log_restore_failed": {
+    "message": "恢复失败",
+    "description": "Log message for restore failure."
+  },
+  "log_config_saved": {
+    "message": "配置已保存",
+    "description": "Log message for config saved."
+  },
+  "log_auto_backup": {
+    "message": "自动备份已触发",
+    "description": "Log message for auto backup trigger."
+  },
+  "sync_button": {
+    "message": "同步",
+    "description": "Sync button text."
+  },
+  "sync_checking": {
+    "message": "检查中...",
+    "description": "Sync checking status."
+  },
+  "sync_up_to_date": {
+    "message": "已是最新",
+    "description": "Sync up to date message."
+  },
+  "sync_downloading": {
+    "message": "远程更新，正在下载...",
+    "description": "Sync downloading message."
+  },
+  "sync_uploading": {
+    "message": "本地更新，正在上传...",
+    "description": "Sync uploading message."
+  },
+  "sync_complete": {
+    "message": "同步完成",
+    "description": "Sync complete message."
+  },
+  "sync_failed": {
+    "message": "同步失败: ",
+    "description": "Sync failed prefix."
+  },
+  "sync_on_startup": {
+    "message": "启动时同步",
+    "description": "Sync on startup toggle."
+  },
+  "sync_skipped_no_changes": {
+    "message": "无变更，跳过同步",
+    "description": "Sync skipped message."
   }
 }

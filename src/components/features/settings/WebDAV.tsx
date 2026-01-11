@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import { useI18n } from '@/i18n';
 import { useNotification, useAccounts } from '@/store';
+import { addSyncLog, getSyncLogs, clearSyncLogs, formatLogTime, type SyncLogEntry } from '@/utils/sync-logger';
 import '@/assets/styles/components.css';
 
 interface WebDAVProps {
@@ -55,10 +56,25 @@ export default function WebDAV({ onClose }: WebDAVProps) {
     const [showRestoreList, setShowRestoreList] = useState(false);
     const [backupFiles, setBackupFiles] = useState<Array<{ name: string, date: string }>>([]);
     const [restoreLoading, setRestoreLoading] = useState(false);
+    // 日志相关状态
+    const [showLogs, setShowLogs] = useState(false);
+    const [syncLogs, setSyncLogs] = useState<SyncLogEntry[]>([]);
+    // 同步状态
+    const [syncing, setSyncing] = useState(false);
+    // 启动时同步开关
+    const [syncOnStartup, setSyncOnStartup] = useState(false);
 
     // Helper function to show toast messages | 显示 Toast 消息的辅助函数
     const showToast = (type: 'success' | 'error', text: string) => {
         notificationDispatch({ type, payload: text });
+    };
+
+    // Helper function to refresh logs | 刷新日志的辅助函数
+    const refreshLogs = async () => {
+        if (showLogs) {
+            const logs = await getSyncLogs();
+            setSyncLogs(logs);
+        }
     };
 
     // List backups from WebDAV server using PROPFIND | 使用 PROPFIND 列出 WebDAV 服务器上的备份
@@ -147,6 +163,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         }
 
         setRestoreLoading(true);
+        await addSyncLog('INFO', 'RESTORE_START', t('log_restore_start'), filename);
 
         try {
             const downloadUrl = serverUrl.endsWith('/')
@@ -208,12 +225,16 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             // Update global state immediately | 立即更新全局状态
             accountsDispatch({ type: 'setEntries', payload: mergedAccounts });
 
+            await addSyncLog('INFO', 'RESTORE_SUCCESS', t('log_restore_success'), `导入 ${importCount} 个账户`);
             showToast('success', t('restore_success', [importCount.toString()]));
             setShowRestoreList(false);
         } catch (err) {
-            showToast('error', t('restore_failed') + (err instanceof Error ? err.message : t('unknown_error')));
+            const errorMsg = err instanceof Error ? err.message : t('unknown_error');
+            await addSyncLog('ERROR', 'RESTORE_FAILED', t('log_restore_failed'), errorMsg);
+            showToast('error', t('restore_failed') + errorMsg);
         } finally {
             setRestoreLoading(false);
+            await refreshLogs();
         }
     };
 
@@ -256,7 +277,8 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             password, // Store password directly (no encryption without master password) | 直接存储密码（无主密码时不加密）
             autoBackup,
             backupInterval: parseInt(backupInterval),
-            retentionDays
+            retentionDays,
+            syncOnStartup
         };
 
         // Save config to storage | 保存配置到存储
@@ -281,7 +303,9 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             }
         }
 
+        await addSyncLog('INFO', 'CONFIG_SAVED', t('log_config_saved'), `自动备份: ${autoBackup ? '开启' : '关闭'}`);
         showToast('success', t('config_saved'));
+        await refreshLogs();
     };
 
     // Handle manual backup to WebDAV | 手动备份到 WebDAV
@@ -298,6 +322,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         }
 
         setLoading(true);
+        await addSyncLog('INFO', 'BACKUP_START', t('log_backup_start'), serverUrl);
 
         try {
             // Get entries from storage | 从存储中获取账户数据
@@ -334,6 +359,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             });
 
             if (response.ok || response.status === 201 || response.status === 204) {
+                await addSyncLog('INFO', 'BACKUP_SUCCESS', t('log_backup_success'), `文件: ${filename}`);
                 showToast('success', t('backup_success'));
             } else {
                 if (response.status === 401) {
@@ -347,10 +373,198 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                 }
             }
         } catch (err) {
-            showToast('error', t('backup_failed') + (err instanceof Error ? err.message : t('unknown_error')));
+            const errorMsg = err instanceof Error ? err.message : t('unknown_error');
+            await addSyncLog('ERROR', 'BACKUP_FAILED', t('log_backup_failed'), errorMsg);
+            showToast('error', t('backup_failed') + errorMsg);
         } finally {
             setLoading(false);
+            await refreshLogs();
         }
+    };
+
+    // Handle smart sync - compare local and remote, sync the newest | 智能同步 - 对比本地和远程，取最新
+    const handleSync = async () => {
+        if (!serverUrl || !username || !password) {
+            showToast('error', t('configure_webdav_first'));
+            return;
+        }
+
+        if (!await ensureWebDAVPermission(serverUrl)) {
+            showToast('error', t('permission_denied'));
+            return;
+        }
+
+        setSyncing(true);
+        await addSyncLog('INFO', 'BACKUP_START', t('sync_checking'));
+
+        try {
+            // 1. Get local data and its timestamp | 获取本地数据及其时间戳
+            const localResult = await chrome.storage.local.get(['entries', 'entriesLastModified']);
+            const localEntries = localResult.entries || [];
+            const localTimestamp = localResult.entriesLastModified || 0;
+
+            // 2. Get remote latest backup file info | 获取远程最新备份文件信息
+            const propfindResponse = await fetch(serverUrl, {
+                method: 'PROPFIND',
+                headers: {
+                    'Authorization': 'Basic ' + btoa(`${username}:${password}`),
+                    'Depth': '1',
+                    'Content-Type': 'application/xml'
+                },
+                body: `<?xml version="1.0" encoding="utf-8" ?>
+                    <D:propfind xmlns:D="DAV:">
+                        <D:prop>
+                            <D:displayname/>
+                            <D:getlastmodified/>
+                        </D:prop>
+                    </D:propfind>`
+            });
+
+            if (!propfindResponse.ok) {
+                throw new Error(`HTTP ${propfindResponse.status}`);
+            }
+
+            const text = await propfindResponse.text();
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(text, 'text/xml');
+            const responses = xml.getElementsByTagNameNS('DAV:', 'response');
+
+            // Find latest backup file | 找到最新的备份文件
+            let latestRemoteFile: { name: string; timestamp: number } | null = null;
+            for (let i = 0; i < responses.length; i++) {
+                const href = responses[i].getElementsByTagNameNS('DAV:', 'href')[0]?.textContent || '';
+                const lastModified = responses[i].getElementsByTagNameNS('DAV:', 'getlastmodified')[0]?.textContent || '';
+
+                if (href.includes('auths-backup') && href.endsWith('.json')) {
+                    const name = decodeURIComponent(href.split('/').pop() || '');
+                    const timestamp = lastModified ? new Date(lastModified).getTime() : 0;
+
+                    if (!latestRemoteFile || timestamp > latestRemoteFile.timestamp) {
+                        latestRemoteFile = { name, timestamp };
+                    }
+                }
+            }
+
+            // 3. Compare and sync | 对比并同步
+            if (!latestRemoteFile) {
+                // No remote backup, upload local | 没有远程备份，上传本地
+                if (localEntries.length > 0) {
+                    showToast('success', t('sync_uploading'));
+                    await performUpload(localEntries);
+                } else {
+                    showToast('success', t('sync_up_to_date'));
+                }
+            } else if (localTimestamp === 0 && localEntries.length === 0) {
+                // No local data, download remote | 没有本地数据，下载远程
+                showToast('success', t('sync_downloading'));
+                await performDownload(latestRemoteFile.name);
+            } else if (latestRemoteFile.timestamp > localTimestamp) {
+                // Remote is newer, download | 远程更新，下载
+                showToast('success', t('sync_downloading'));
+                await performDownload(latestRemoteFile.name);
+            } else if (localTimestamp > latestRemoteFile.timestamp) {
+                // Local is newer, upload | 本地更新，上传
+                showToast('success', t('sync_uploading'));
+                await performUpload(localEntries);
+            } else {
+                // Same timestamp, up to date | 时间相同，已是最新
+                showToast('success', t('sync_up_to_date'));
+            }
+
+            await addSyncLog('INFO', 'BACKUP_SUCCESS', t('sync_complete'));
+            // 记录上次同步时间
+            await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : t('unknown_error');
+            await addSyncLog('ERROR', 'BACKUP_FAILED', t('sync_failed') + errorMsg);
+            showToast('error', t('sync_failed') + errorMsg);
+        } finally {
+            setSyncing(false);
+        }
+    };
+
+    // Helper: perform upload | 辅助函数：执行上传
+    const performUpload = async (entries: any[]) => {
+        const backupData = {
+            version: '1.0',
+            timestamp: Date.now(),
+            accounts: entries
+        };
+
+        const now = new Date().toISOString().slice(0, 10);
+        const filename = `auths-backup-${now}.json`;
+        const uploadUrl = serverUrl.endsWith('/')
+            ? `${serverUrl}${filename}`
+            : `${serverUrl}/${filename}`;
+
+        const response = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: {
+                'Authorization': 'Basic ' + btoa(`${username}:${password}`),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(backupData, null, 2)
+        });
+
+        if (!response.ok && response.status !== 201 && response.status !== 204) {
+            throw new Error(`Upload failed: HTTP ${response.status}`);
+        }
+
+        // Update local timestamp | 更新本地时间戳
+        await chrome.storage.local.set({ entriesLastModified: Date.now() });
+    };
+
+    // Helper: perform download and merge | 辅助函数：执行下载并合并
+    const performDownload = async (filename: string) => {
+        const downloadUrl = serverUrl.endsWith('/')
+            ? `${serverUrl}${filename}`
+            : `${serverUrl}/${filename}`;
+
+        const response = await fetch(downloadUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': 'Basic ' + btoa(`${username}:${password}`)
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Download failed: HTTP ${response.status}`);
+        }
+
+        const backupData = await response.json();
+        if (!backupData.accounts || !Array.isArray(backupData.accounts)) {
+            throw new Error('Invalid backup format');
+        }
+
+        // Merge accounts | 合并账户
+        const localResult = await chrome.storage.local.get(['entries']);
+        const existingAccounts = localResult.entries || [];
+        const mergedAccounts = [...existingAccounts];
+        const existingHashes = new Set(mergedAccounts.map((a: any) => a.hash).filter(Boolean));
+
+        const generateHash = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+
+        for (const account of backupData.accounts) {
+            let accountHash = account.hash;
+            if (!accountHash || existingHashes.has(accountHash)) {
+                accountHash = generateHash();
+                account.hash = accountHash;
+            }
+
+            const exists = mergedAccounts.find((a: any) => a.hash === accountHash);
+            if (!exists) {
+                existingHashes.add(accountHash);
+                mergedAccounts.push(account);
+            }
+        }
+
+        await chrome.storage.local.set({
+            entries: mergedAccounts,
+            entriesLastModified: Date.now()
+        });
+
+        // Update global state | 更新全局状态
+        accountsDispatch({ type: 'setEntries', payload: mergedAccounts });
     };
 
     // Load saved config on mount | 组件挂载时加载已保存的配置
@@ -365,6 +579,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                 setAutoBackup(result.webdavConfig.autoBackup || false);
                 setBackupInterval(result.webdavConfig.backupInterval?.toString() || '1440');
                 setRetentionDays(result.webdavConfig.retentionDays || 30);
+                setSyncOnStartup(result.webdavConfig.syncOnStartup || false);
             }
         };
         loadConfig();
@@ -464,6 +679,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                                     className="form-select"
                                     style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }}
                                 >
+                                    <option value="30">{t('freq_30m')}</option>
                                     <option value="60">{t('freq_1h')}</option>
                                     <option value="360">{t('freq_6h')}</option>
                                     <option value="720">{t('freq_12h')}</option>
@@ -490,6 +706,43 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                             </div>
                         </>
                     )}
+
+                    {/* 启动时同步开关 */}
+                    <div className="toggle-setting" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderTop: '1px solid var(--color-border)', marginTop: '16px' }}>
+                        <span style={{ fontSize: '14px', color: 'var(--color-text-primary)' }}>{t('sync_on_startup')}</span>
+                        <label className="toggle-switch" style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px' }}>
+                            <input
+                                type="checkbox"
+                                checked={syncOnStartup}
+                                onChange={(e) => setSyncOnStartup(e.target.checked)}
+                                style={{ opacity: 0, width: 0, height: 0 }}
+                            />
+                            <span style={{
+                                position: 'absolute',
+                                cursor: 'pointer',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: syncOnStartup ? 'var(--color-primary)' : 'var(--color-border)',
+                                transition: '0.3s',
+                                borderRadius: '24px'
+                            }}>
+                                <span style={{
+                                    position: 'absolute',
+                                    content: '""',
+                                    height: '18px',
+                                    width: '18px',
+                                    left: syncOnStartup ? '23px' : '3px',
+                                    bottom: '3px',
+                                    backgroundColor: 'var(--color-bg-primary)',
+                                    transition: '0.3s',
+                                    borderRadius: '50%',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                }}></span>
+                            </span>
+                        </label>
+                    </div>
 
                     <div className="button-group">
                         <button
@@ -547,6 +800,82 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                     )}
 
 
+                    {/* 查看同步日志按钮 */}
+                    <div className="button-group" style={{ marginTop: '8px' }}>
+                        <button
+                            className="btn-secondary"
+                            onClick={async () => {
+                                const logs = await getSyncLogs();
+                                setSyncLogs(logs);
+                                setShowLogs(!showLogs);
+                            }}
+                            style={{ width: '100%' }}
+                        >
+                            📋 {t('view_sync_logs')}
+                        </button>
+                    </div>
+
+                    {/* 日志列表 */}
+                    {showLogs && (
+                        <div className="backup-list" style={{ marginTop: '16px', padding: '12px', background: 'var(--color-bg-secondary)', borderRadius: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                <h4 style={{ margin: 0, fontSize: '14px' }}>📋 {t('sync_logs_title')}</h4>
+                                <button
+                                    onClick={async () => {
+                                        await clearSyncLogs();
+                                        setSyncLogs([]);
+                                        showToast('success', t('logs_cleared'));
+                                    }}
+                                    style={{
+                                        background: 'transparent',
+                                        border: '1px solid var(--color-border)',
+                                        padding: '4px 8px',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        cursor: 'pointer',
+                                        color: 'var(--color-text-secondary)'
+                                    }}
+                                >
+                                    🗑️ {t('clear_logs')}
+                                </button>
+                            </div>
+                            <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                                {syncLogs.length === 0 ? (
+                                    <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '13px', padding: '16px' }}>
+                                        {t('no_sync_logs')}
+                                    </div>
+                                ) : (
+                                    syncLogs.map((log, index) => (
+                                        <div
+                                            key={index}
+                                            style={{
+                                                padding: '8px 12px',
+                                                marginBottom: '4px',
+                                                background: 'var(--color-bg-primary)',
+                                                borderRadius: '6px',
+                                                fontSize: '12px',
+                                                borderLeft: `3px solid ${log.level === 'ERROR' ? '#ef4444' : log.level === 'WARN' ? '#f59e0b' : '#22c55e'}`
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                <span style={{ fontWeight: 500, color: log.level === 'ERROR' ? '#ef4444' : 'var(--color-text-primary)' }}>
+                                                    {log.level === 'ERROR' ? '❌' : log.level === 'WARN' ? '⚠️' : '✅'} {log.message}
+                                                </span>
+                                                <span style={{ color: 'var(--color-text-secondary)', fontSize: '11px' }}>
+                                                    {formatLogTime(log.timestamp)}
+                                                </span>
+                                            </div>
+                                            {log.details && (
+                                                <div style={{ color: 'var(--color-text-secondary)', fontSize: '11px' }}>
+                                                    {log.details}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="backup-tips">
                         <h4>💡 {t('backup_tips_title')}</h4>

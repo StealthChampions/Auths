@@ -352,7 +352,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
             <div className="about-info">
               <div className="info-row">
                 <span>{t('version')}</span>
-                <span>1.0.0</span>
+                <span>1.0.1</span>
               </div>
               <div className="info-row">
                 <span>{t('developer')}</span>
