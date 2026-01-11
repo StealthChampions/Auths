@@ -327,12 +327,30 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         try {
             // Get entries from storage | 从存储中获取账户数据
             const result = await chrome.storage.local.get(['entries']);
-            const entries = result.entries || [];
+            let entries = result.entries || [];
 
             if (entries.length === 0) {
                 showToast('error', t('no_accounts_backup'));
                 setLoading(false);
                 return;
+            }
+
+            // Deduplicate before upload | 上传前去重
+            const normalizeSecret = (s: string) => s ? s.toUpperCase().replace(/\s/g, '') : '';
+            const seenSecrets = new Set<string>();
+            const deduplicatedEntries = entries.filter((acc: any) => {
+                const normalized = normalizeSecret(acc.secret);
+                if (normalized && seenSecrets.has(normalized)) return false;
+                if (normalized) seenSecrets.add(normalized);
+                return true;
+            });
+
+            // Update local if duplicates were removed | 如果有重复被移除则更新本地
+            if (deduplicatedEntries.length < entries.length) {
+                await chrome.storage.local.set({ entries: deduplicatedEntries, entriesLastModified: Date.now() });
+                accountsDispatch({ type: 'setEntries', payload: deduplicatedEntries });
+                await addSyncLog('INFO', 'BACKUP_START', '上传前去重', `移除 ${entries.length - deduplicatedEntries.length} 个重复账户`);
+                entries = deduplicatedEntries;
             }
 
             // Create backup data | 创建备份数据

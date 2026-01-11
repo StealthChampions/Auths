@@ -176,7 +176,24 @@ export default function Popup() {
             } else if (localTimestamp > (latestRemote?.timestamp || 0) && localEntries.length > 0) {
               // Local is newer, upload | 本地更新，上传
               console.log('[Auths] Startup sync: local is newer, uploading...');
-              const backupData = { version: '1.0', timestamp: Date.now(), accounts: localEntries };
+
+              // Deduplicate before upload | 上传前去重
+              const seenSecrets = new Set<string>();
+              const deduplicatedEntries = localEntries.filter((acc: any) => {
+                const normalized = acc.secret ? acc.secret.toUpperCase().replace(/\s/g, '') : '';
+                if (normalized && seenSecrets.has(normalized)) return false;
+                if (normalized) seenSecrets.add(normalized);
+                return true;
+              });
+
+              // Update local if duplicates were removed | 如果有重复被移除则更新本地
+              if (deduplicatedEntries.length < localEntries.length) {
+                await chrome.storage.local.set({ entries: deduplicatedEntries, entriesLastModified: Date.now() });
+                accountsDispatch({ type: 'setEntries', payload: deduplicatedEntries });
+                console.log(`[Auths] Startup sync: removed ${localEntries.length - deduplicatedEntries.length} duplicates`);
+              }
+
+              const backupData = { version: '1.0', timestamp: Date.now(), accounts: deduplicatedEntries };
               const filename = `auths-backup-${new Date().toISOString().slice(0, 10)}.json`;
               const uploadUrl = config.serverUrl.endsWith('/') ? `${config.serverUrl}${filename}` : `${config.serverUrl}/${filename}`;
               const uploadResp = await fetch(uploadUrl, {
