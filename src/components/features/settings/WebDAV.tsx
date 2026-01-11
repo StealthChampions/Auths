@@ -56,12 +56,12 @@ export default function WebDAV({ onClose }: WebDAVProps) {
     const [showRestoreList, setShowRestoreList] = useState(false);
     const [backupFiles, setBackupFiles] = useState<Array<{ name: string, date: string }>>([]);
     const [restoreLoading, setRestoreLoading] = useState(false);
-    // 日志相关状态
+    // Log related state | 日志相关状态
     const [showLogs, setShowLogs] = useState(false);
     const [syncLogs, setSyncLogs] = useState<SyncLogEntry[]>([]);
-    // 同步状态
+    // Sync state | 同步状态
     const [syncing, setSyncing] = useState(false);
-    // 启动时同步开关
+    // Sync on startup toggle | 启动时同步开关
     const [syncOnStartup, setSyncOnStartup] = useState(false);
 
     // Helper function to show toast messages | 显示 Toast 消息的辅助函数
@@ -472,7 +472,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             }
 
             await addSyncLog('INFO', 'BACKUP_SUCCESS', t('sync_complete'));
-            // 记录上次同步时间
+            // Record last sync timestamp | 记录上次同步时间
             await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : t('unknown_error');
@@ -540,7 +540,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         const localResult = await chrome.storage.local.get(['entries']);
         const existingAccounts = localResult.entries || [];
         const mergedAccounts = [...existingAccounts];
-        // 用 hash 和 secret 两个维度去重
+        // Deduplicate using both hash and secret | 用 hash 和 secret 两个维度去重
         const existingHashes = new Set(mergedAccounts.map((a: any) => a.hash).filter(Boolean));
         const existingSecrets = new Set(mergedAccounts.map((a: any) => a.secret).filter(Boolean));
 
@@ -548,7 +548,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
 
         let importCount = 0;
         for (const account of backupData.accounts) {
-            // 如果 secret 已存在，跳过（避免重复验证码）
+            // Skip if secret already exists (prevent duplicate OTPs) | 如果 secret 已存在，跳过（避免重复验证码）
             if (account.secret && existingSecrets.has(account.secret)) {
                 continue;
             }
@@ -714,7 +714,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                         </>
                     )}
 
-                    {/* 启动时同步开关 */}
+                    {/* Sync on startup toggle | 启动时同步开关 */}
                     <div className="toggle-setting" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderTop: '1px solid var(--color-border)', marginTop: '16px' }}>
                         <span style={{ fontSize: '14px', color: 'var(--color-text-primary)' }}>{t('sync_on_startup')}</span>
                         <label className="toggle-switch" style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px' }}>
