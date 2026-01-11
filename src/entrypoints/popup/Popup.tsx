@@ -11,6 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStyle, useMenu, useNotification, useAccounts } from '@/store';
 import { UserSettings } from '@/models/settings';
+import { addSyncLog } from '@/utils/sync-logger';
 import MainHeader from '@/components/layout/MainHeader';
 import MainBody from '@/components/layout/MainBody';
 import Settings from '@/components/features/settings/Settings';
@@ -198,7 +199,9 @@ export default function Popup() {
 
                   await chrome.storage.local.set({ entries: deduplicatedAccounts, entriesLastModified: Date.now(), lastSyncedTimestamp: Date.now() });
                   accountsDispatch({ type: 'setEntries', payload: deduplicatedAccounts });
-                  console.log(`[Auths] Startup sync: merged and deduplicated, removed ${allAccounts.length - deduplicatedAccounts.length} duplicates`);
+                  const removedCount = allAccounts.length - deduplicatedAccounts.length;
+                  await addSyncLog('INFO', 'BACKUP_SUCCESS', '启动同步成功（下载）', `去重 ${removedCount} 个账户`);
+                  console.log(`[Auths] Startup sync: merged and deduplicated, removed ${removedCount} duplicates`);
                 }
               }
             } else if (localTimestamp > (latestRemote?.timestamp || 0) && localEntries.length > 0) {
@@ -231,10 +234,12 @@ export default function Popup() {
               });
               if (uploadResp.ok || uploadResp.status === 201 || uploadResp.status === 204) {
                 await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
+                await addSyncLog('INFO', 'BACKUP_SUCCESS', '启动同步成功（上传）', `文件: ${filename}`);
                 console.log('[Auths] Startup sync: uploaded successfully');
               }
             } else {
               console.log('[Auths] Startup sync: already up to date');
+              await addSyncLog('INFO', 'BACKUP_SUCCESS', '启动同步跳过', '本地和远程数据一致');
               await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
             }
           }
