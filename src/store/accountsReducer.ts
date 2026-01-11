@@ -255,10 +255,13 @@ function generateHash(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-// 保存 entries 到 chrome.storage
+// 保存 entries 到 chrome.storage 并更新修改时间戳
 function saveEntriesToStorage(entries: any[]) {
   if (typeof chrome !== 'undefined' && chrome.storage) {
-    chrome.storage.local.set({ entries });
+    chrome.storage.local.set({
+      entries,
+      entriesLastModified: Date.now()
+    });
   }
 }
 

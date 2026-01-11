@@ -61,6 +61,117 @@ export default defineBackground(() => {
     }
   });
 
+  // Handle auto backup alarm | 处理自动备份定时器
+  chrome.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm.name === 'autoBackup') {
+      console.log('[Auths Background] Auto backup alarm triggered');
+
+      try {
+        // Get WebDAV config | 获取 WebDAV 配置
+        const configResult = await chrome.storage.local.get(['webdavConfig']);
+        const config = configResult.webdavConfig;
+
+        if (!config || !config.serverUrl || !config.username || !config.password) {
+          console.log('[Auths Background] WebDAV not configured, skipping auto backup');
+          return;
+        }
+
+        // Get entries and timestamps | 获取账户数据和时间戳
+        const entriesResult = await chrome.storage.local.get(['entries', 'entriesLastModified', 'lastSyncedTimestamp']);
+        const entries = entriesResult.entries || [];
+        const entriesLastModified = entriesResult.entriesLastModified || 0;
+        const lastSyncedTimestamp = entriesResult.lastSyncedTimestamp || 0;
+
+        if (entries.length === 0) {
+          console.log('[Auths Background] No entries to backup');
+          return;
+        }
+
+        // Check if there are changes since last sync | 检查自上次同步后是否有变更
+        if (entriesLastModified <= lastSyncedTimestamp) {
+          console.log('[Auths Background] No changes since last sync, skipping auto backup');
+          return;
+        }
+
+        // Log backup start | 记录备份开始
+        const logEntry = {
+          timestamp: Date.now(),
+          level: 'INFO',
+          operation: 'AUTO_BACKUP_TRIGGER',
+          message: '自动备份已触发',
+          details: config.serverUrl
+        };
+
+        // Save log | 保存日志
+        const logsResult = await chrome.storage.local.get(['webdavSyncLogs']);
+        const logs = logsResult.webdavSyncLogs || [];
+        logs.push(logEntry);
+        while (logs.length > 100) logs.shift();
+        await chrome.storage.local.set({ webdavSyncLogs: logs });
+
+        // Create backup data | 创建备份数据
+        const backupData = {
+          version: '1.0',
+          timestamp: Date.now(),
+          accounts: entries
+        };
+
+        const now = new Date().toISOString().slice(0, 10);
+        const filename = `auths-backup-${now}.json`;
+        const uploadUrl = config.serverUrl.endsWith('/')
+          ? `${config.serverUrl}${filename}`
+          : `${config.serverUrl}/${filename}`;
+
+        // Upload to WebDAV | 上传到 WebDAV
+        const response = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Authorization': 'Basic ' + btoa(`${config.username}:${config.password}`),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(backupData, null, 2)
+        });
+
+        // Log result | 记录结果
+        const resultLog = {
+          timestamp: Date.now(),
+          level: response.ok || response.status === 201 || response.status === 204 ? 'INFO' : 'ERROR',
+          operation: response.ok || response.status === 201 || response.status === 204 ? 'BACKUP_SUCCESS' : 'BACKUP_FAILED',
+          message: response.ok || response.status === 201 || response.status === 204 ? '自动备份成功' : '自动备份失败',
+          details: `文件: ${filename}, 状态: ${response.status}`
+        };
+
+        const updatedLogs = (await chrome.storage.local.get(['webdavSyncLogs'])).webdavSyncLogs || [];
+        updatedLogs.push(resultLog);
+        while (updatedLogs.length > 100) updatedLogs.shift();
+        await chrome.storage.local.set({ webdavSyncLogs: updatedLogs });
+
+        // Update lastSyncedTimestamp on success | 成功后更新上次同步时间
+        if (response.ok || response.status === 201 || response.status === 204) {
+          await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
+        }
+
+        console.log(`[Auths Background] Auto backup ${response.ok ? 'successful' : 'failed'}: ${response.status}`);
+      } catch (error) {
+        console.error('[Auths Background] Auto backup error:', error);
+
+        // Log error | 记录错误
+        const errorLog = {
+          timestamp: Date.now(),
+          level: 'ERROR',
+          operation: 'BACKUP_FAILED',
+          message: '自动备份失败',
+          details: error instanceof Error ? error.message : '未知错误'
+        };
+
+        const logs = (await chrome.storage.local.get(['webdavSyncLogs'])).webdavSyncLogs || [];
+        logs.push(errorLog);
+        while (logs.length > 100) logs.shift();
+        await chrome.storage.local.set({ webdavSyncLogs: logs });
+      }
+    }
+  });
+
   // Handle commands
   // 处理快捷键命令
   chrome.commands.onCommand.addListener((command: string) => {

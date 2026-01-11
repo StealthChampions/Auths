@@ -85,6 +85,110 @@ export default function Popup() {
       if (UserSettings.items.smartFilter !== undefined) {
         menuDispatch({ type: 'setSmartFilter', payload: UserSettings.items.smartFilter });
       }
+
+      // Sync on startup | 启动时自动同步
+      try {
+        const configResult = await chrome.storage.local.get(['webdavConfig']);
+        const config = configResult.webdavConfig;
+        if (config?.syncOnStartup && config?.serverUrl && config?.username && config?.password) {
+          console.log('[Auths] Startup sync enabled, performing auto sync...');
+
+          // Get local data and timestamps | 获取本地数据和时间戳
+          const dataResult = await chrome.storage.local.get(['entries', 'entriesLastModified', 'lastSyncedTimestamp']);
+          const localEntries = dataResult.entries || [];
+          const localTimestamp = dataResult.entriesLastModified || 0;
+          const lastSyncedTimestamp = dataResult.lastSyncedTimestamp || 0;
+
+          // Skip if already synced and no local changes | 已同步且无本地变更则跳过
+          if (lastSyncedTimestamp > 0 && localTimestamp <= lastSyncedTimestamp) {
+            console.log('[Auths] Startup sync: no local changes, checking remote...');
+          }
+
+          // Get remote latest backup | 获取远程最新备份
+          const propfindResponse = await fetch(config.serverUrl, {
+            method: 'PROPFIND',
+            headers: {
+              'Authorization': 'Basic ' + btoa(`${config.username}:${config.password}`),
+              'Depth': '1',
+              'Content-Type': 'application/xml'
+            },
+            body: `<?xml version="1.0" encoding="utf-8" ?>
+              <D:propfind xmlns:D="DAV:">
+                <D:prop><D:displayname/><D:getlastmodified/></D:prop>
+              </D:propfind>`
+          });
+
+          if (propfindResponse.ok) {
+            const text = await propfindResponse.text();
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(text, 'text/xml');
+            const responses = xml.getElementsByTagNameNS('DAV:', 'response');
+
+            // Find latest remote backup | 找到最新的远程备份
+            let latestRemote: { name: string; timestamp: number } | null = null;
+            for (let i = 0; i < responses.length; i++) {
+              const href = responses[i].getElementsByTagNameNS('DAV:', 'href')[0]?.textContent || '';
+              const lastMod = responses[i].getElementsByTagNameNS('DAV:', 'getlastmodified')[0]?.textContent || '';
+              if (href.includes('auths-backup') && href.endsWith('.json')) {
+                const ts = lastMod ? new Date(lastMod).getTime() : 0;
+                if (!latestRemote || ts > latestRemote.timestamp) {
+                  latestRemote = { name: decodeURIComponent(href.split('/').pop() || ''), timestamp: ts };
+                }
+              }
+            }
+
+            // Sync logic | 同步逻辑
+            if (latestRemote && latestRemote.timestamp > localTimestamp) {
+              // Remote is newer, download | 远程更新，下载
+              console.log('[Auths] Startup sync: remote is newer, downloading...');
+              const downloadUrl = config.serverUrl.endsWith('/')
+                ? `${config.serverUrl}${latestRemote.name}`
+                : `${config.serverUrl}/${latestRemote.name}`;
+              const downloadResp = await fetch(downloadUrl, {
+                method: 'GET',
+                headers: { 'Authorization': 'Basic ' + btoa(`${config.username}:${config.password}`) }
+              });
+              if (downloadResp.ok) {
+                const backupData = await downloadResp.json();
+                if (backupData.accounts && Array.isArray(backupData.accounts)) {
+                  const merged = [...localEntries];
+                  const hashes = new Set(merged.map((a: any) => a.hash).filter(Boolean));
+                  for (const acc of backupData.accounts) {
+                    if (!acc.hash || !hashes.has(acc.hash)) {
+                      if (!acc.hash) acc.hash = Date.now().toString(36) + Math.random().toString(36).slice(2);
+                      merged.push(acc);
+                      hashes.add(acc.hash);
+                    }
+                  }
+                  await chrome.storage.local.set({ entries: merged, entriesLastModified: Date.now(), lastSyncedTimestamp: Date.now() });
+                  accountsDispatch({ type: 'setEntries', payload: merged });
+                  console.log('[Auths] Startup sync: downloaded and merged');
+                }
+              }
+            } else if (localTimestamp > (latestRemote?.timestamp || 0) && localEntries.length > 0) {
+              // Local is newer, upload | 本地更新，上传
+              console.log('[Auths] Startup sync: local is newer, uploading...');
+              const backupData = { version: '1.0', timestamp: Date.now(), accounts: localEntries };
+              const filename = `auths-backup-${new Date().toISOString().slice(0, 10)}.json`;
+              const uploadUrl = config.serverUrl.endsWith('/') ? `${config.serverUrl}${filename}` : `${config.serverUrl}/${filename}`;
+              const uploadResp = await fetch(uploadUrl, {
+                method: 'PUT',
+                headers: { 'Authorization': 'Basic ' + btoa(`${config.username}:${config.password}`), 'Content-Type': 'application/json' },
+                body: JSON.stringify(backupData, null, 2)
+              });
+              if (uploadResp.ok || uploadResp.status === 201 || uploadResp.status === 204) {
+                await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
+                console.log('[Auths] Startup sync: uploaded successfully');
+              }
+            } else {
+              console.log('[Auths] Startup sync: already up to date');
+              await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
+            }
+          }
+        }
+      } catch (err) {
+        console.log('[Auths] Startup sync failed:', err);
+      }
     };
     loadSettings();
   }, []);
