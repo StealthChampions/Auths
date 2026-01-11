@@ -159,16 +159,19 @@ export default defineBackground(() => {
               const merged = [...entries];
               // Deduplicate using both hash and secret | 用 hash 和 secret 两个维度去重
               const hashes = new Set(merged.map((a: any) => a.hash).filter(Boolean));
-              const secrets = new Set(merged.map((a: any) => a.secret).filter(Boolean));
+              // Normalize secret: uppercase and remove spaces | 统一 secret 格式：大写并去除空格
+              const normalizeSecret = (s: string) => s ? s.toUpperCase().replace(/\s/g, '') : '';
+              const secrets = new Set(merged.map((a: any) => normalizeSecret(a.secret)).filter(Boolean));
               let importCount = 0;
               for (const acc of backupData.accounts) {
+                const normalizedSecret = normalizeSecret(acc.secret);
                 // Skip if secret already exists | 如果 secret 已存在，跳过
-                if (acc.secret && secrets.has(acc.secret)) continue;
+                if (normalizedSecret && secrets.has(normalizedSecret)) continue;
                 if (!acc.hash || hashes.has(acc.hash)) {
                   acc.hash = Date.now().toString(36) + Math.random().toString(36).slice(2);
                 }
                 hashes.add(acc.hash);
-                if (acc.secret) secrets.add(acc.secret);
+                if (normalizedSecret) secrets.add(normalizedSecret);
                 merged.push(acc);
                 importCount++;
               }
