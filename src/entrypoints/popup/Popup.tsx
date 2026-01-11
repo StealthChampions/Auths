@@ -64,10 +64,11 @@ export default function Popup() {
             return true;
           });
 
-          // Update storage if duplicates were removed | 如果有重复被移除则更新存储
+          // Update storage if duplicates were removed (don't update timestamp to avoid triggering sync)
+          // 如果有重复被移除则更新存储（不更新时间戳以避免触发同步）
           if (deduplicatedEntries.length < entries.length) {
             console.log(`[Auths] Auto cleanup: removed ${entries.length - deduplicatedEntries.length} duplicate entries`);
-            await chrome.storage.local.set({ entries: deduplicatedEntries, entriesLastModified: Date.now() });
+            await chrome.storage.local.set({ entries: deduplicatedEntries });
           }
 
           accountsDispatch({ type: 'setEntries', payload: deduplicatedEntries });
@@ -204,9 +205,9 @@ export default function Popup() {
                   console.log(`[Auths] Startup sync: merged and deduplicated, removed ${removedCount} duplicates`);
                 }
               }
-            } else if (localTimestamp > (latestRemote?.timestamp || 0) && localEntries.length > 0) {
-              // Local is newer, upload | 本地更新，上传
-              console.log('[Auths] Startup sync: local is newer, uploading...');
+            } else if (localTimestamp > lastSyncedTimestamp && localEntries.length > 0) {
+              // Local has changes since last sync, upload | 本地自上次同步后有变更，上传
+              console.log('[Auths] Startup sync: local has changes since last sync, uploading...');
 
               // Deduplicate before upload | 上传前去重
               const seenSecrets = new Set<string>();
