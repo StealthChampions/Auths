@@ -152,13 +152,18 @@ export default function Popup() {
                 const backupData = await downloadResp.json();
                 if (backupData.accounts && Array.isArray(backupData.accounts)) {
                   const merged = [...localEntries];
+                  // 用 hash 和 secret 两个维度去重
                   const hashes = new Set(merged.map((a: any) => a.hash).filter(Boolean));
+                  const secrets = new Set(merged.map((a: any) => a.secret).filter(Boolean));
                   for (const acc of backupData.accounts) {
-                    if (!acc.hash || !hashes.has(acc.hash)) {
-                      if (!acc.hash) acc.hash = Date.now().toString(36) + Math.random().toString(36).slice(2);
-                      merged.push(acc);
-                      hashes.add(acc.hash);
+                    // 如果 secret 已存在，跳过
+                    if (acc.secret && secrets.has(acc.secret)) continue;
+                    if (!acc.hash || hashes.has(acc.hash)) {
+                      acc.hash = Date.now().toString(36) + Math.random().toString(36).slice(2);
                     }
+                    hashes.add(acc.hash);
+                    if (acc.secret) secrets.add(acc.secret);
+                    merged.push(acc);
                   }
                   await chrome.storage.local.set({ entries: merged, entriesLastModified: Date.now(), lastSyncedTimestamp: Date.now() });
                   accountsDispatch({ type: 'setEntries', payload: merged });
