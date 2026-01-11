@@ -75,83 +75,125 @@ export default defineBackground(() => {
           console.log('[Auths Background] WebDAV not configured, skipping auto backup');
           return;
         }
-
         // Get entries and timestamps | 获取账户数据和时间戳
-        const entriesResult = await chrome.storage.local.get(['entries', 'entriesLastModified', 'lastSyncedTimestamp']);
+        const entriesResult = await chrome.storage.local.get(['entries', 'entriesLastModified']);
         const entries = entriesResult.entries || [];
-        const entriesLastModified = entriesResult.entriesLastModified || 0;
-        const lastSyncedTimestamp = entriesResult.lastSyncedTimestamp || 0;
+        const localTimestamp = entriesResult.entriesLastModified || 0;
 
         if (entries.length === 0) {
           console.log('[Auths Background] No entries to backup');
           return;
         }
 
-        // Check if there are changes since last sync | 检查自上次同步后是否有变更
-        if (entriesLastModified <= lastSyncedTimestamp) {
-          console.log('[Auths Background] No changes since last sync, skipping auto backup');
-          return;
-        }
-
-        // Log backup start | 记录备份开始
-        const logEntry = {
-          timestamp: Date.now(),
-          level: 'INFO',
-          operation: 'AUTO_BACKUP_TRIGGER',
-          message: '自动备份已触发',
-          details: config.serverUrl
-        };
-
-        // Save log | 保存日志
-        const logsResult = await chrome.storage.local.get(['webdavSyncLogs']);
-        const logs = logsResult.webdavSyncLogs || [];
-        logs.push(logEntry);
-        while (logs.length > 100) logs.shift();
-        await chrome.storage.local.set({ webdavSyncLogs: logs });
-
-        // Create backup data | 创建备份数据
-        const backupData = {
-          version: '1.0',
-          timestamp: Date.now(),
-          accounts: entries
-        };
-
-        const now = new Date().toISOString().slice(0, 10);
-        const filename = `auths-backup-${now}.json`;
-        const uploadUrl = config.serverUrl.endsWith('/')
-          ? `${config.serverUrl}${filename}`
-          : `${config.serverUrl}/${filename}`;
-
-        // Upload to WebDAV | 上传到 WebDAV
-        const response = await fetch(uploadUrl, {
-          method: 'PUT',
+        // Get remote latest backup timestamp | 获取远程最新备份时间戳
+        const propfindResponse = await fetch(config.serverUrl, {
+          method: 'PROPFIND',
           headers: {
             'Authorization': 'Basic ' + btoa(`${config.username}:${config.password}`),
-            'Content-Type': 'application/json'
+            'Depth': '1',
+            'Content-Type': 'application/xml'
           },
-          body: JSON.stringify(backupData, null, 2)
+          body: `<?xml version="1.0" encoding="utf-8" ?>
+            <D:propfind xmlns:D="DAV:">
+              <D:prop><D:displayname/><D:getlastmodified/></D:prop>
+            </D:propfind>`
         });
 
-        // Log result | 记录结果
-        const resultLog = {
-          timestamp: Date.now(),
-          level: response.ok || response.status === 201 || response.status === 204 ? 'INFO' : 'ERROR',
-          operation: response.ok || response.status === 201 || response.status === 204 ? 'BACKUP_SUCCESS' : 'BACKUP_FAILED',
-          message: response.ok || response.status === 201 || response.status === 204 ? '自动备份成功' : '自动备份失败',
-          details: `文件: ${filename}, 状态: ${response.status}`
+        let remoteTimestamp = 0;
+        let remoteFilename = '';
+        if (propfindResponse.ok) {
+          const text = await propfindResponse.text();
+          const parser = new DOMParser();
+          const xml = parser.parseFromString(text, 'text/xml');
+          const responses = xml.getElementsByTagNameNS('DAV:', 'response');
+
+          for (let i = 0; i < responses.length; i++) {
+            const href = responses[i].getElementsByTagNameNS('DAV:', 'href')[0]?.textContent || '';
+            const lastMod = responses[i].getElementsByTagNameNS('DAV:', 'getlastmodified')[0]?.textContent || '';
+            if (href.includes('auths-backup') && href.endsWith('.json')) {
+              const ts = lastMod ? new Date(lastMod).getTime() : 0;
+              if (ts > remoteTimestamp) {
+                remoteTimestamp = ts;
+                remoteFilename = decodeURIComponent(href.split('/').pop() || '');
+              }
+            }
+          }
+        }
+
+        // Log helper | 日志辅助函数
+        const addLog = async (level: string, operation: string, message: string, details: string) => {
+          const log = { timestamp: Date.now(), level, operation, message, details };
+          const logsResult = await chrome.storage.local.get(['webdavSyncLogs']);
+          const logs = logsResult.webdavSyncLogs || [];
+          logs.push(log);
+          while (logs.length > 100) logs.shift();
+          await chrome.storage.local.set({ webdavSyncLogs: logs });
         };
 
-        const updatedLogs = (await chrome.storage.local.get(['webdavSyncLogs'])).webdavSyncLogs || [];
-        updatedLogs.push(resultLog);
-        while (updatedLogs.length > 100) updatedLogs.shift();
-        await chrome.storage.local.set({ webdavSyncLogs: updatedLogs });
+        // Sync decision based on timestamps | 基于时间戳的同步决策
+        if (remoteTimestamp > localTimestamp && remoteFilename) {
+          // Remote is newer, download | 远程更新，下载
+          console.log('[Auths Background] Remote is newer, downloading...');
+          await addLog('INFO', 'AUTO_BACKUP_TRIGGER', '检测到远程更新，正在下载', remoteFilename);
 
-        // Update lastSyncedTimestamp on success | 成功后更新上次同步时间
-        if (response.ok || response.status === 201 || response.status === 204) {
+          const downloadUrl = config.serverUrl.endsWith('/')
+            ? `${config.serverUrl}${remoteFilename}`
+            : `${config.serverUrl}/${remoteFilename}`;
+          const downloadResp = await fetch(downloadUrl, {
+            method: 'GET',
+            headers: { 'Authorization': 'Basic ' + btoa(`${config.username}:${config.password}`) }
+          });
+
+          if (downloadResp.ok) {
+            const backupData = await downloadResp.json();
+            if (backupData.accounts && Array.isArray(backupData.accounts)) {
+              const merged = [...entries];
+              const hashes = new Set(merged.map((a: any) => a.hash).filter(Boolean));
+              for (const acc of backupData.accounts) {
+                if (!acc.hash || !hashes.has(acc.hash)) {
+                  if (!acc.hash) acc.hash = Date.now().toString(36) + Math.random().toString(36).slice(2);
+                  merged.push(acc);
+                  hashes.add(acc.hash);
+                }
+              }
+              await chrome.storage.local.set({ entries: merged, entriesLastModified: Date.now(), lastSyncedTimestamp: Date.now() });
+              await addLog('INFO', 'BACKUP_SUCCESS', '自动同步成功（下载）', `合并 ${backupData.accounts.length} 个账户`);
+            }
+          } else {
+            await addLog('ERROR', 'BACKUP_FAILED', '下载失败', `HTTP ${downloadResp.status}`);
+          }
+        } else if (localTimestamp > remoteTimestamp) {
+          // Local is newer, upload | 本地更新，上传
+          console.log('[Auths Background] Local is newer, uploading...');
+          await addLog('INFO', 'AUTO_BACKUP_TRIGGER', '本地更新，正在上传', config.serverUrl);
+
+          const backupData = { version: '1.0', timestamp: Date.now(), accounts: entries };
+          const filename = `auths-backup-${new Date().toISOString().slice(0, 10)}.json`;
+          const uploadUrl = config.serverUrl.endsWith('/') ? `${config.serverUrl}${filename}` : `${config.serverUrl}/${filename}`;
+
+          const response = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: {
+              'Authorization': 'Basic ' + btoa(`${config.username}:${config.password}`),
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(backupData, null, 2)
+          });
+
+          if (response.ok || response.status === 201 || response.status === 204) {
+            await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
+            await addLog('INFO', 'BACKUP_SUCCESS', '自动备份成功（上传）', `文件: ${filename}`);
+          } else {
+            await addLog('ERROR', 'BACKUP_FAILED', '上传失败', `HTTP ${response.status}`);
+          }
+        } else {
+          // Already up to date | 已是最新
+          console.log('[Auths Background] Already up to date');
+          await addLog('INFO', 'AUTO_BACKUP_TRIGGER', '自动备份跳过（已是最新）', '本地和远程数据一致');
           await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
         }
 
-        console.log(`[Auths Background] Auto backup ${response.ok ? 'successful' : 'failed'}: ${response.status}`);
+        console.log('[Auths Background] Auto sync completed');
       } catch (error) {
         console.error('[Auths Background] Auto backup error:', error);
 
