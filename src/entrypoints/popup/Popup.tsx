@@ -44,7 +44,32 @@ export default function Popup() {
       try {
         const result = await chrome.storage.local.get(['entries']);
         if (result.entries && Array.isArray(result.entries)) {
-          accountsDispatch({ type: 'setEntries', payload: result.entries });
+          const entries = result.entries;
+
+          // Auto deduplicate on load | 加载时自动去重
+          const normalizeSecret = (s: string) => s ? s.toUpperCase().replace(/\s/g, '') : '';
+          const seenSecrets = new Set<string>();
+          const seenHashes = new Set<string>();
+          const generateHash = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+
+          const deduplicatedEntries = entries.filter((acc: any) => {
+            const normalizedSecret = normalizeSecret(acc.secret);
+            if (normalizedSecret && seenSecrets.has(normalizedSecret)) return false;
+            if (!acc.hash || seenHashes.has(acc.hash)) {
+              acc.hash = generateHash();
+            }
+            if (normalizedSecret) seenSecrets.add(normalizedSecret);
+            seenHashes.add(acc.hash);
+            return true;
+          });
+
+          // Update storage if duplicates were removed | 如果有重复被移除则更新存储
+          if (deduplicatedEntries.length < entries.length) {
+            console.log(`[Auths] Auto cleanup: removed ${entries.length - deduplicatedEntries.length} duplicate entries`);
+            await chrome.storage.local.set({ entries: deduplicatedEntries, entriesLastModified: Date.now() });
+          }
+
+          accountsDispatch({ type: 'setEntries', payload: deduplicatedEntries });
         }
       } catch {
         // Silently handle loading errors
