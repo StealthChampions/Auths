@@ -186,7 +186,23 @@ export default defineBackground(() => {
           console.log('[Auths Background] Local is newer, uploading...');
           await addLog('INFO', 'AUTO_BACKUP_TRIGGER', '本地更新，正在上传', config.serverUrl);
 
-          const backupData = { version: '1.0', timestamp: Date.now(), accounts: entries };
+          // Deduplicate before upload | 上传前去重
+          const normalizeSecret = (s: string) => s ? s.toUpperCase().replace(/\s/g, '') : '';
+          const seenSecrets = new Set<string>();
+          const deduplicatedEntries = entries.filter((acc: any) => {
+            const normalized = normalizeSecret(acc.secret);
+            if (normalized && seenSecrets.has(normalized)) return false;
+            if (normalized) seenSecrets.add(normalized);
+            return true;
+          });
+
+          // Update local if duplicates were removed | 如果有重复被移除则更新本地
+          if (deduplicatedEntries.length < entries.length) {
+            await chrome.storage.local.set({ entries: deduplicatedEntries, entriesLastModified: Date.now() });
+            await addLog('INFO', 'AUTO_BACKUP_TRIGGER', '上传前去重', `移除 ${entries.length - deduplicatedEntries.length} 个重复账户`);
+          }
+
+          const backupData = { version: '1.0', timestamp: Date.now(), accounts: deduplicatedEntries };
           const filename = `auths-backup-${new Date().toISOString().slice(0, 10)}.json`;
           const uploadUrl = config.serverUrl.endsWith('/') ? `${config.serverUrl}${filename}` : `${config.serverUrl}/${filename}`;
 
