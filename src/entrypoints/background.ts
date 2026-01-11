@@ -156,27 +156,31 @@ export default defineBackground(() => {
           if (downloadResp.ok) {
             const backupData = await downloadResp.json();
             if (backupData.accounts && Array.isArray(backupData.accounts)) {
-              const merged = [...entries];
-              // Deduplicate using both hash and secret | 用 hash 和 secret 两个维度去重
-              const hashes = new Set(merged.map((a: any) => a.hash).filter(Boolean));
-              // Normalize secret: uppercase and remove spaces | 统一 secret 格式：大写并去除空格
+              // First merge all accounts | 先合并所有账户
+              const allAccounts = [...entries, ...backupData.accounts];
+
+              // Then deduplicate | 然后去重
               const normalizeSecret = (s: string) => s ? s.toUpperCase().replace(/\s/g, '') : '';
-              const secrets = new Set(merged.map((a: any) => normalizeSecret(a.secret)).filter(Boolean));
-              let importCount = 0;
-              for (const acc of backupData.accounts) {
+              const seenSecrets = new Set<string>();
+              const seenHashes = new Set<string>();
+              const generateHash = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+
+              const deduplicatedAccounts = allAccounts.filter((acc: any) => {
                 const normalizedSecret = normalizeSecret(acc.secret);
-                // Skip if secret already exists | 如果 secret 已存在，跳过
-                if (normalizedSecret && secrets.has(normalizedSecret)) continue;
-                if (!acc.hash || hashes.has(acc.hash)) {
-                  acc.hash = Date.now().toString(36) + Math.random().toString(36).slice(2);
+                if (normalizedSecret && seenSecrets.has(normalizedSecret)) return false;
+                if (!acc.hash || seenHashes.has(acc.hash)) {
+                  acc.hash = generateHash();
                 }
-                hashes.add(acc.hash);
-                if (normalizedSecret) secrets.add(normalizedSecret);
-                merged.push(acc);
-                importCount++;
-              }
-              await chrome.storage.local.set({ entries: merged, entriesLastModified: Date.now(), lastSyncedTimestamp: Date.now() });
-              await addLog('INFO', 'BACKUP_SUCCESS', '自动同步成功（下载）', `新增 ${importCount} 个账户`);
+                if (normalizedSecret) seenSecrets.add(normalizedSecret);
+                seenHashes.add(acc.hash);
+                return true;
+              });
+
+              const importCount = deduplicatedAccounts.length - entries.length;
+              const removedDuplicates = allAccounts.length - deduplicatedAccounts.length;
+
+              await chrome.storage.local.set({ entries: deduplicatedAccounts, entriesLastModified: Date.now(), lastSyncedTimestamp: Date.now() });
+              await addLog('INFO', 'BACKUP_SUCCESS', '自动同步成功（下载）', `新增 ${importCount} 个账户, 去重 ${removedDuplicates} 个`);
             }
           } else {
             await addLog('ERROR', 'BACKUP_FAILED', '下载失败', `HTTP ${downloadResp.status}`);
