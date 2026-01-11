@@ -103,13 +103,22 @@ export default defineBackground(() => {
         let remoteFilename = '';
         if (propfindResponse.ok) {
           const text = await propfindResponse.text();
-          const parser = new DOMParser();
-          const xml = parser.parseFromString(text, 'text/xml');
-          const responses = xml.getElementsByTagNameNS('DAV:', 'response');
 
-          for (let i = 0; i < responses.length; i++) {
-            const href = responses[i].getElementsByTagNameNS('DAV:', 'href')[0]?.textContent || '';
-            const lastMod = responses[i].getElementsByTagNameNS('DAV:', 'getlastmodified')[0]?.textContent || '';
+          // Parse XML using regex (DOMParser not available in Service Worker)
+          // 使用正则解析 XML（Service Worker 中无 DOMParser）
+          const responseRegex = /<D:response[^>]*>([\s\S]*?)<\/D:response>/gi;
+          const hrefRegex = /<D:href[^>]*>([^<]*)<\/D:href>/i;
+          const lastModRegex = /<D:getlastmodified[^>]*>([^<]*)<\/D:getlastmodified>/i;
+
+          let match;
+          while ((match = responseRegex.exec(text)) !== null) {
+            const responseBlock = match[1];
+            const hrefMatch = hrefRegex.exec(responseBlock);
+            const lastModMatch = lastModRegex.exec(responseBlock);
+
+            const href = hrefMatch ? hrefMatch[1] : '';
+            const lastMod = lastModMatch ? lastModMatch[1] : '';
+
             if (href.includes('auths-backup') && href.endsWith('.json')) {
               const ts = lastMod ? new Date(lastMod).getTime() : 0;
               if (ts > remoteTimestamp) {
