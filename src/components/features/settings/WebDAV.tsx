@@ -540,22 +540,29 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         const localResult = await chrome.storage.local.get(['entries']);
         const existingAccounts = localResult.entries || [];
         const mergedAccounts = [...existingAccounts];
+        // 用 hash 和 secret 两个维度去重
         const existingHashes = new Set(mergedAccounts.map((a: any) => a.hash).filter(Boolean));
+        const existingSecrets = new Set(mergedAccounts.map((a: any) => a.secret).filter(Boolean));
 
         const generateHash = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 
+        let importCount = 0;
         for (const account of backupData.accounts) {
+            // 如果 secret 已存在，跳过（避免重复验证码）
+            if (account.secret && existingSecrets.has(account.secret)) {
+                continue;
+            }
+
             let accountHash = account.hash;
             if (!accountHash || existingHashes.has(accountHash)) {
                 accountHash = generateHash();
                 account.hash = accountHash;
             }
 
-            const exists = mergedAccounts.find((a: any) => a.hash === accountHash);
-            if (!exists) {
-                existingHashes.add(accountHash);
-                mergedAccounts.push(account);
-            }
+            existingHashes.add(accountHash);
+            if (account.secret) existingSecrets.add(account.secret);
+            mergedAccounts.push(account);
+            importCount++;
         }
 
         await chrome.storage.local.set({

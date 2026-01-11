@@ -148,16 +148,23 @@ export default defineBackground(() => {
             const backupData = await downloadResp.json();
             if (backupData.accounts && Array.isArray(backupData.accounts)) {
               const merged = [...entries];
+              // 用 hash 和 secret 两个维度去重
               const hashes = new Set(merged.map((a: any) => a.hash).filter(Boolean));
+              const secrets = new Set(merged.map((a: any) => a.secret).filter(Boolean));
+              let importCount = 0;
               for (const acc of backupData.accounts) {
-                if (!acc.hash || !hashes.has(acc.hash)) {
-                  if (!acc.hash) acc.hash = Date.now().toString(36) + Math.random().toString(36).slice(2);
-                  merged.push(acc);
-                  hashes.add(acc.hash);
+                // 如果 secret 已存在，跳过
+                if (acc.secret && secrets.has(acc.secret)) continue;
+                if (!acc.hash || hashes.has(acc.hash)) {
+                  acc.hash = Date.now().toString(36) + Math.random().toString(36).slice(2);
                 }
+                hashes.add(acc.hash);
+                if (acc.secret) secrets.add(acc.secret);
+                merged.push(acc);
+                importCount++;
               }
               await chrome.storage.local.set({ entries: merged, entriesLastModified: Date.now(), lastSyncedTimestamp: Date.now() });
-              await addLog('INFO', 'BACKUP_SUCCESS', '自动同步成功（下载）', `合并 ${backupData.accounts.length} 个账户`);
+              await addLog('INFO', 'BACKUP_SUCCESS', '自动同步成功（下载）', `新增 ${importCount} 个账户`);
             }
           } else {
             await addLog('ERROR', 'BACKUP_FAILED', '下载失败', `HTTP ${downloadResp.status}`);
