@@ -542,14 +542,17 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         const mergedAccounts = [...existingAccounts];
         // Deduplicate using both hash and secret | 用 hash 和 secret 两个维度去重
         const existingHashes = new Set(mergedAccounts.map((a: any) => a.hash).filter(Boolean));
-        const existingSecrets = new Set(mergedAccounts.map((a: any) => a.secret).filter(Boolean));
+        // Normalize secret: uppercase and remove spaces | 统一 secret 格式：大写并去除空格
+        const normalizeSecret = (s: string) => s ? s.toUpperCase().replace(/\s/g, '') : '';
+        const existingSecrets = new Set(mergedAccounts.map((a: any) => normalizeSecret(a.secret)).filter(Boolean));
 
         const generateHash = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 
         let importCount = 0;
         for (const account of backupData.accounts) {
+            const normalizedSecret = normalizeSecret(account.secret);
             // Skip if secret already exists (prevent duplicate OTPs) | 如果 secret 已存在，跳过（避免重复验证码）
-            if (account.secret && existingSecrets.has(account.secret)) {
+            if (normalizedSecret && existingSecrets.has(normalizedSecret)) {
                 continue;
             }
 
@@ -560,7 +563,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             }
 
             existingHashes.add(accountHash);
-            if (account.secret) existingSecrets.add(account.secret);
+            if (normalizedSecret) existingSecrets.add(normalizedSecret);
             mergedAccounts.push(account);
             importCount++;
         }
