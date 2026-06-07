@@ -190,42 +190,41 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             // Merge with existing accounts | 与现有账户合并
             const result = await chrome.storage.local.get(['entries']);
             const existingAccounts = result.entries || [];
-            const mergedAccounts = [...existingAccounts];
 
-            // Collect all existing hashes to check for duplicates
-            // 收集所有现有的 hash 以检查重复
-            const existingHashes = new Set(mergedAccounts.map((a: any) => a.hash).filter(Boolean));
+            // First merge all accounts | 先合并所有账户
+            const allAccounts = [...existingAccounts, ...backupData.accounts];
 
-            // Helper function to generate unique hash
-            // 生成唯一 hash 的辅助函数
+            // Then deduplicate by secret (consistent with performDownload and background.ts)
+            // 基于 secret 去重（与 performDownload 和 background.ts 保持一致）
+            const normalizeSecret = (s: string) => s ? s.toUpperCase().replace(/\s/g, '') : '';
+            const seenSecrets = new Set<string>();
+            const seenHashes = new Set<string>();
             const generateHash = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 
-            let importCount = 0;
-            for (const account of backupData.accounts) {
-                // Ensure account has a unique hash
-                // 确保账户有唯一的 hash
-                let accountHash = account.hash;
-                if (!accountHash || existingHashes.has(accountHash)) {
-                    // Generate new hash if missing or duplicate
-                    // 如果缺失或重复则生成新 hash
-                    accountHash = generateHash();
-                    account.hash = accountHash;
+            const deduplicatedAccounts = allAccounts.filter((account: any) => {
+                const normalizedSecret = normalizeSecret(account.secret);
+                // Skip if secret already seen | 如果 secret 已见过，跳过
+                if (normalizedSecret && seenSecrets.has(normalizedSecret)) {
+                    return false;
                 }
-
-                const exists = mergedAccounts.find((a: any) => a.hash === accountHash);
-                if (!exists) {
-                    existingHashes.add(accountHash);
-                    mergedAccounts.push(account);
-                    importCount++;
+                // Ensure unique hash | 确保 hash 唯一
+                if (!account.hash || seenHashes.has(account.hash)) {
+                    account.hash = generateHash();
                 }
-            }
+                if (normalizedSecret) seenSecrets.add(normalizedSecret);
+                seenHashes.add(account.hash);
+                return true;
+            });
 
-            await chrome.storage.local.set({ entries: mergedAccounts });
+            const importCount = deduplicatedAccounts.length - existingAccounts.length;
+            const removedDuplicates = allAccounts.length - deduplicatedAccounts.length;
+
+            await chrome.storage.local.set({ entries: deduplicatedAccounts });
 
             // Update global state immediately | 立即更新全局状态
-            accountsDispatch({ type: 'setEntries', payload: mergedAccounts });
+            accountsDispatch({ type: 'setEntries', payload: deduplicatedAccounts });
 
-            await addSyncLog('INFO', 'RESTORE_SUCCESS', t('log_restore_success'), `导入 ${importCount} 个账户`);
+            await addSyncLog('INFO', 'RESTORE_SUCCESS', t('log_restore_success'), `导入 ${importCount} 个账户, 去重 ${removedDuplicates} 个`);
             showToast('success', t('restore_success', [importCount.toString()]));
             setShowRestoreList(false);
         } catch (err) {

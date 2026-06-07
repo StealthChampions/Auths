@@ -44,6 +44,7 @@ lerna-debug.log*
 .idea/
 .vscode/
 .claude/
+.gemini/
 CLAUDE.md
 *.suo
 *.ntvs*
