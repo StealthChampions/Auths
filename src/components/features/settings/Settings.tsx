@@ -352,7 +352,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
             <div className="about-info">
               <div className="info-row">
                 <span>{t('version')}</span>
-                <span>1.0.2</span>
+                <span>{chrome.runtime.getManifest().version}</span>
               </div>
               <div className="info-row">
                 <span>{t('developer')}</span>
