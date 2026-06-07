@@ -163,11 +163,12 @@ export default function AddMethodSelector({ onClose, onSuccess, onManualEntry }:
       const accountData = parseOtpAuthUrl(qrData);
       console.log('[Auths] Parsed account data:', accountData);
 
-      // Check for duplicate account
+      // Check for duplicate account (by secret only, consistent with all other dedup paths)
+      // 仅基于 secret 检查重复（与所有其他去重逻辑保持一致）
       const normalizedSecret = accountData.secret.trim().toUpperCase().replace(/\s/g, '');
       const isDuplicate = entries?.some((entry: any) => {
         const entrySecret = (entry.secret || '').toUpperCase().replace(/\s/g, '');
-        return entry.issuer === accountData.issuer && entrySecret === normalizedSecret;
+        return entrySecret === normalizedSecret;
       });
 
       if (isDuplicate) {

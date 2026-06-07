@@ -373,12 +373,13 @@ export default defineBackground(() => {
           const result = await chrome.storage.local.get(['entries']);
           const entries = result.entries || [];
 
-          // Check for duplicate account (same issuer and secret)
-          // 检查重复账户（相同的发行者和密钥）
-          const isDuplicate = entries.some((entry: any) =>
-            entry.secret === accountData.secret &&
-            entry.issuer === accountData.issuer
-          );
+          // Check for duplicate account (by secret only, consistent with all other dedup paths)
+          // 仅基于 secret 检查重复（与所有其他去重逻辑保持一致）
+          const normalizedSecret = accountData.secret.toUpperCase().replace(/\s/g, '');
+          const isDuplicate = entries.some((entry: any) => {
+            const entrySecret = (entry.secret || '').toUpperCase().replace(/\s/g, '');
+            return entrySecret === normalizedSecret;
+          });
 
           if (isDuplicate) {
             console.log('[Auths Background] Duplicate account detected');
