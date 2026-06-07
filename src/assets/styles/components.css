@@ -553,6 +553,9 @@
   position: relative;
   transition: all 0.2s;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .entry:hover {
