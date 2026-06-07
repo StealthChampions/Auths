@@ -1,6 +1,7 @@
 /* Add Account Form Styles */
 .add-account-form {
-  background: white;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
   border-radius: 8px;
   padding: 24px;
   max-width: 420px;
@@ -736,61 +737,59 @@
   margin: 0;
 }
 
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
+/* Dark Mode Support - follows app theme via data-theme attribute */
+[data-theme="dark"] .add-account-form,
+[data-theme="dark"] .qr-scanner-modal,
+[data-theme="dark"] .add-method-selector {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
 
-  .add-account-form,
-  .qr-scanner-modal,
-  .add-method-selector {
-    background: #1e1e1e;
-    color: #e0e0e0;
-  }
+[data-theme="dark"] .entry {
+  background: var(--color-bg-primary);
+  border-color: var(--color-border);
+}
 
-  .entry {
-    background: #2a2a2a;
-    border-color: #404040;
-  }
+[data-theme="dark"] .entry:hover {
+  border-color: var(--color-primary);
+}
 
-  .entry:hover {
-    border-color: var(--color-primary);
-  }
+[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group select,
+[data-theme="dark"] .search-input {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
 
-  .form-group input,
-  .form-group select,
-  .search-input {
-    background: #2a2a2a;
-    border-color: #404040;
-    color: #e0e0e0;
-  }
+[data-theme="dark"] .btn-secondary {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
 
-  .btn-secondary {
-    background: #2a2a2a;
-    border-color: #404040;
-    color: #e0e0e0;
-  }
+[data-theme="dark"] .method-item {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+}
 
-  .method-item {
-    background: #2a2a2a;
-    border-color: #404040;
-  }
+[data-theme="dark"] .method-item:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-primary);
+}
 
-  .method-item:hover {
-    background: #333;
-    border-color: var(--color-primary);
-  }
+[data-theme="dark"] .method-title {
+  color: var(--color-text-primary);
+}
 
-  .method-title {
-    color: #e0e0e0;
-  }
-
-  .method-description {
-    color: #999;
-  }
+[data-theme="dark"] .method-description {
+  color: var(--color-text-secondary);
 }
 
 /* Add Method Selector Styles */
 .add-method-selector {
-  background: white;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
   border-radius: 12px;
   /* padding: 24px; */
   max-width: 340px;
@@ -822,8 +821,8 @@
   align-items: center;
   gap: 14px;
   padding: 14px 16px;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s;
@@ -866,13 +865,13 @@
 .method-title {
   font-size: 15px;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary);
   margin-bottom: 2px;
 }
 
 .method-description {
   font-size: 12px;
-  color: #666;
+  color: var(--color-text-secondary);
   line-height: 1.4;
 }
 
