@@ -59,6 +59,10 @@ export default function EditAccountModal({ entry, onClose, onSave }: EditAccount
       return;
     }
 
+    // If issuer changed, clear custom icon so favicon re-resolves
+    // 如果 issuer 改变了，清除自定义图标以便重新解析 favicon
+    const issuerChanged = issuer.trim() !== entry.issuer;
+
     // Update account
     dispatch({
       type: 'updateEntry',
@@ -69,6 +73,7 @@ export default function EditAccountModal({ entry, onClose, onSave }: EditAccount
         folder: folder.trim() || '',
         period,
         digits,
+        ...(issuerChanged ? { icon: undefined } : {}),
       }
     });
 

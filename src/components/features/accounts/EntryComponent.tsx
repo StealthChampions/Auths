@@ -48,6 +48,11 @@ const QRCodeIcon = () => (
 const ServiceIcon = ({ issuer, account, icon }: { issuer: string; account: string; icon?: string }) => {
   const [error, setError] = useState(false);
 
+  // Reset error state when props change so icon re-resolves
+  useEffect(() => {
+    setError(false);
+  }, [issuer, account, icon]);
+
   if (icon) {
     return <img src={icon} alt={issuer} className="service-icon" onError={() => setError(true)} />;
   }

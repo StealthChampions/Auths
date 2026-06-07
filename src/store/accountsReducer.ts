@@ -30,7 +30,7 @@ export type AccountsAction =
   | { type: 'pinEntry'; payload: string }
   | { type: 'deleteCode'; payload: string }
   | { type: 'addCode'; payload: any }
-  | { type: 'updateEntry'; payload: { hash: string; issuer?: string; account?: string; folder?: string; period?: number; digits?: number } }
+  | { type: 'updateEntry'; payload: { hash: string; issuer?: string; account?: string; folder?: string; period?: number; digits?: number; icon?: string } }
   | { type: 'moveEntryUp'; payload: string }
   | { type: 'moveEntryDown'; payload: string }
   | { type: 'reorderEntry'; payload: { fromHash: string; toHash: string } };
@@ -161,6 +161,7 @@ export function accountsReducer(state = initialState, action: AccountsAction): A
             folder: action.payload.folder !== undefined ? action.payload.folder : entry.folder,
             period: action.payload.period !== undefined ? action.payload.period : entry.period,
             digits: action.payload.digits !== undefined ? action.payload.digits : entry.digits,
+            icon: 'icon' in action.payload ? action.payload.icon : entry.icon,
           }
           : entry
       );
