@@ -25,7 +25,7 @@ export default defineConfig({
       }
     },
     permissions: ['activeTab', 'storage', 'scripting', 'clipboardWrite'],
-    optional_permissions: ['alarms', 'notifications'],
+    optional_permissions: ['alarms', 'notifications', 'tabs'],
     optional_host_permissions: ['*://*/*'],
     host_permissions: [],
     commands: {
