@@ -578,7 +578,8 @@ body {
   color: var(--color-code);
   text-align: center;
   padding: var(--space-1) 0;
-  user-select: all;
+  -webkit-user-select: none;
+  user-select: none;
 
   &.encrypted {
     color: var(--color-text-tertiary);
