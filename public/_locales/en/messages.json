@@ -600,6 +600,12 @@
     "smart_filter_description": {
         "message": "Automatically filter accounts based on the current website"
     },
+    "site_badge": {
+        "message": "Show match count on icon"
+    },
+    "site_badge_description": {
+        "message": "Show how many accounts match the current site as a badge on the toolbar icon. Requires the \"tabs\" permission."
+    },
     "context_menu_description": {
         "message": "Add Authenticator to the browser's context menu"
     },

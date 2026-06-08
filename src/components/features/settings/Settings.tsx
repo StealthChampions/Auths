@@ -8,7 +8,7 @@
  * 以及导入导出和 WebDAV 功能入口。
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMenu, useNotification, useAccounts } from '@/store';
 import { syncTimeWithGoogle } from '@/models/syncTime';
 import { useI18n } from '@/i18n';
@@ -66,6 +66,32 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   const { dispatch: notificationDispatch } = useNotification();
   const { dispatch: accountsDispatch } = useAccounts();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [siteBadgeEnabled, setSiteBadgeEnabled] = useState(false);
+
+  useEffect(() => {
+    chrome.permissions
+      .contains({ permissions: ['tabs'] })
+      .then(setSiteBadgeEnabled)
+      .catch(() => setSiteBadgeEnabled(false));
+  }, []);
+
+  const handleSiteBadgeToggle = async (enabled: boolean) => {
+    try {
+      if (enabled) {
+        const granted = await chrome.permissions.request({ permissions: ['tabs'] });
+        if (!granted) {
+          notificationDispatch({ type: 'error', payload: t('permission_denied') });
+          return;
+        }
+        setSiteBadgeEnabled(true);
+      } else {
+        await chrome.permissions.remove({ permissions: ['tabs'] });
+        setSiteBadgeEnabled(false);
+      }
+    } catch {
+      notificationDispatch({ type: 'error', payload: t('permission_denied') });
+    }
+  };
 
   // Handle clear all data | 处理清除所有数据
   const handleClearAllData = async () => {
@@ -261,6 +287,20 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 </label>
                 <p className="setting-description">
                   {t('smart_filter_description')}
+                </p>
+              </div>
+
+              <div className="setting-item">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={siteBadgeEnabled}
+                    onChange={(e) => handleSiteBadgeToggle(e.target.checked)}
+                  />
+                  <span>{t('site_badge')}</span>
+                </label>
+                <p className="setting-description">
+                  {t('site_badge_description')}
                 </p>
               </div>
             </div>

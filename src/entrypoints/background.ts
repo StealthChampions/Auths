@@ -8,6 +8,8 @@
  * 提供屏幕截图、二维码解析和账户存储功能。
  */
 
+import { parseSiteName, countMatchedEntries } from '@/utils/site-match';
+
 export default defineBackground(() => {
   // Localized messages for toast notifications
   // 用于 Toast 通知的本地化消息
@@ -262,6 +264,144 @@ export default defineBackground(() => {
       // Handle autofill command | 处理自动填充命令
     }
   });
+
+  // ==== Site-match badge ====
+  // 当切换/加载标签页时，统计已存储账户中能匹配当前网址的数量并显示为角标
+  // Count entries that match the active tab's URL and display as a toolbar badge.
+  // 依赖可选 "tabs" 权限以读取 tab.url / tab.title。
+  // Requires the optional "tabs" permission to read tab.url / tab.title.
+
+  const BADGE_BG = '#2563eb';
+  const BADGE_FG = '#ffffff';
+
+  async function hasTabsPermission(): Promise<boolean> {
+    try {
+      return await chrome.permissions.contains({ permissions: ['tabs'] });
+    } catch {
+      return false;
+    }
+  }
+
+  async function setBadgeForTab(tabId: number, count: number) {
+    try {
+      const text = count > 0 ? String(count) : '';
+      await chrome.action.setBadgeText({ tabId, text });
+      if (count > 0) {
+        await chrome.action.setBadgeBackgroundColor({ tabId, color: BADGE_BG });
+        if (chrome.action.setBadgeTextColor) {
+          await chrome.action.setBadgeTextColor({ tabId, color: BADGE_FG });
+        }
+      }
+    } catch {
+      // tab may have been closed | 标签页可能已被关闭
+    }
+  }
+
+  async function updateBadgeForTab(tab: chrome.tabs.Tab) {
+    if (!tab.id) return;
+
+    // Skip non-http(s) pages | 跳过非 http(s) 页面
+    const url = tab.url || tab.pendingUrl || '';
+    if (!/^https?:\/\//i.test(url)) {
+      await setBadgeForTab(tab.id, 0);
+      return;
+    }
+
+    const { entries } = await chrome.storage.local.get(['entries']);
+    if (!Array.isArray(entries) || entries.length === 0) {
+      await setBadgeForTab(tab.id, 0);
+      return;
+    }
+
+    // Treat entries with no secret (locked / encrypted) as not visible — when
+    // every matched entry is locked, show no badge so we don't leak counts.
+    // 已加密的条目（secret 为 null）视为已锁定，全部锁定时不显示角标。
+    const visibleEntries = entries.filter((e: any) => e && e.secret);
+    if (visibleEntries.length === 0) {
+      await setBadgeForTab(tab.id, 0);
+      return;
+    }
+
+    const siteName = parseSiteName(url, tab.title);
+    const count = countMatchedEntries(siteName, visibleEntries);
+    await setBadgeForTab(tab.id, count);
+  }
+
+  async function updateBadgeForActiveTab() {
+    if (!(await hasTabsPermission())) return;
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      if (tab) await updateBadgeForTab(tab);
+    } catch {
+      // ignore
+    }
+  }
+
+  async function clearAllBadges() {
+    try {
+      await chrome.action.setBadgeText({ text: '' });
+      const tabs = await chrome.tabs.query({});
+      for (const tab of tabs) {
+        if (tab.id !== undefined) {
+          await chrome.action.setBadgeText({ tabId: tab.id, text: '' });
+        }
+      }
+    } catch {
+      // chrome.tabs.query may itself require permission; the global clear above
+      // is enough as a fallback.
+    }
+  }
+
+  chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+    if (!(await hasTabsPermission())) return;
+    try {
+      const tab = await chrome.tabs.get(tabId);
+      await updateBadgeForTab(tab);
+    } catch {
+      // ignore
+    }
+  });
+
+  chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
+    if (!tab.active) return;
+    if (!(await hasTabsPermission())) return;
+    if (changeInfo.url || changeInfo.title || changeInfo.status === 'complete') {
+      updateBadgeForTab(tab);
+    }
+  });
+
+  chrome.windows.onFocusChanged.addListener((windowId) => {
+    if (windowId === chrome.windows.WINDOW_ID_NONE) return;
+    updateBadgeForActiveTab();
+  });
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.entries) {
+      updateBadgeForActiveTab();
+    }
+  });
+
+  // React to optional-permission toggle | 响应可选权限的开关
+  if (chrome.permissions.onAdded) {
+    chrome.permissions.onAdded.addListener((perms) => {
+      if (perms.permissions?.includes('tabs')) {
+        updateBadgeForActiveTab();
+      }
+    });
+  }
+  if (chrome.permissions.onRemoved) {
+    chrome.permissions.onRemoved.addListener((perms) => {
+      if (perms.permissions?.includes('tabs')) {
+        clearAllBadges();
+      }
+    });
+  }
+
+  // Initial paint after the worker starts | 服务脚本启动后首次刷新
+  updateBadgeForActiveTab();
+
+  // ==== End site-match badge ====
+
 
   // Parse otpauth URL
   // 解析 otpauth URL

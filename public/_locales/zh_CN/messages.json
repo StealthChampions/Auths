@@ -592,6 +592,12 @@
   "smart_filter_description": {
     "message": "根据当前网站自动筛选账户"
   },
+  "site_badge": {
+    "message": "图标显示匹配数量"
+  },
+  "site_badge_description": {
+    "message": "在工具栏图标上以角标显示当前网站匹配到的账户数量。需要授予 \"tabs\" 权限。"
+  },
   "context_menu_description": {
     "message": "将身份验证器添加到浏览器右键菜单"
   },
