@@ -1,6 +1,6 @@
 # Privacy Policy | 隐私政策
 
-**Last Updated | 最后更新:** January 1, 2026
+**Last Updated | 最后更新:** June 8, 2026
 
 ---
 
@@ -86,6 +86,7 @@ If you choose to enable WebDAV backup:
 | `storage` | Required | Store your account data locally |
 | `scripting` | Required | Inject QR scanner script for screen capture |
 | `clipboardWrite` | Required | Copy verification codes to clipboard |
+| `tabs` | Optional | Read active tab URL/title to count matching accounts as a toolbar badge (only when "Show match count on icon" is enabled) |
 | `alarms` | Optional | Schedule auto-backup (only when enabled) |
 | `notifications` | Optional | Backup completion feedback |
 | `host_permissions` | Optional | WebDAV server access (per-server, only when configured) |
@@ -98,6 +99,7 @@ If you choose to enable WebDAV backup:
 | `storage` | 必需 | 本地存储账户数据 |
 | `scripting` | 必需 | 注入二维码扫描脚本用于屏幕截取 |
 | `clipboardWrite` | 必需 | 复制验证码到剪贴板 |
+| `tabs` | 可选 | 读取当前标签页的 URL 与标题，以在工具栏图标上显示匹配账户数量（仅在开启"图标显示匹配数量"时） |
 | `alarms` | 可选 | 调度自动备份（仅在启用时） |
 | `notifications` | 可选 | 备份完成反馈通知 |
 | `host_permissions` | 可选 | WebDAV 服务器访问（按服务器，仅在配置时） |
@@ -111,16 +113,23 @@ The extension only makes network requests when:
 
 1. User initiates "Sync Time" with Google servers (to correct time drift)
 2. User manually triggers WebDAV backup/restore to their own server
+3. The browser loads a site icon via `www.google.com/s2/favicons` for entries that have no custom icon (image request only, no account data is sent)
 
-All network requests are user-initiated and visible to the user.
+All network requests are user-initiated and visible to the user. The optional
+"Show match count on icon" feature reads the active tab's URL and title only
+in-memory to compare against your locally stored issuers/accounts; nothing is
+ever uploaded.
 
 **中文：**
 扩展仅在以下情况下发起网络请求：
 
 1. 用户启动与 Google 服务器的"时间同步"（用于校正时间偏差）
 2. 用户手动触发到自己服务器的 WebDAV 备份/恢复
+3. 浏览器为无自定义图标的账户从 `www.google.com/s2/favicons` 加载站点图标（仅图片请求，不发送账户数据）
 
-所有网络请求均由用户主动发起且对用户可见。
+所有网络请求均由用户主动发起且对用户可见。可选的"图标显示匹配数量"功能仅在
+内存中读取当前标签页的 URL 与标题，用于与本地保存的 issuer/account 字段比较，
+不会上传任何数据。
 
 ---
 
