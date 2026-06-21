@@ -11,6 +11,7 @@
  */
 
 import jsQR from 'jsqr';
+import { debugLog } from '@/utils/logger';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
@@ -204,7 +205,7 @@ export default defineContentScript({
             cleanup();
 
             if (qrResult.success && qrResult.qrData) {
-              console.log('[Auths Content] QR detected:', qrResult.qrData);
+              debugLog('[Auths Content] QR detected');
               // Send QR data to background script to save
               const saveResponse = await chrome.runtime.sendMessage({
                 action: 'saveQRAccount',
@@ -212,12 +213,12 @@ export default defineContentScript({
               });
 
               if (saveResponse.success) {
-                console.log('[Auths Content] Account saved via background');
+                debugLog('[Auths Content] Account saved via background');
                 const message = saveResponse.message || await getLocalizedMessage('account_added_successfully', 'Account added successfully!');
                 showToast(message, 'success');
                 resolve({ success: true });
               } else if (saveResponse.isDuplicate) {
-                console.log('[Auths Content] Duplicate account detected');
+                debugLog('[Auths Content] Duplicate account detected');
                 const message = saveResponse.message || await getLocalizedMessage('account_already_exists', 'This account already exists!');
                 showToast(message, 'error');
                 resolve({ success: false, error: 'duplicate' });
@@ -227,7 +228,7 @@ export default defineContentScript({
                 resolve({ success: false, error: saveResponse.error });
               }
             } else {
-              console.log('[Auths Content] No QR code found');
+              debugLog('[Auths Content] No QR code found');
               const message = await getLocalizedMessage('qr_error_not_found', 'QR code not found');
               showToast(message, 'error');
               resolve({ success: false, error: 'QR code not found' });
@@ -348,23 +349,23 @@ export default defineContentScript({
           });
 
           if (code) {
-            console.log('[Auths Content] QR found (normal):', code.data);
+            debugLog('[Auths Content] QR found in normal mode');
             resolve({ success: true, qrData: code.data });
             return;
           }
 
           // Try with inverted colors
           // 尝试反色检测
-          console.log('[Auths Content] Trying inverted...');
+          debugLog('[Auths Content] Trying inverted QR detection');
           code = jsQR(imageData.data, imageData.width, imageData.height, {
             inversionAttempts: 'attemptBoth',
           });
 
           if (code) {
-            console.log('[Auths Content] QR found (inverted):', code.data);
+            debugLog('[Auths Content] QR found in inverted mode');
             resolve({ success: true, qrData: code.data });
           } else {
-            console.log('[Auths Content] No QR code detected');
+            debugLog('[Auths Content] No QR code detected');
             resolve({ success: false });
           }
         };

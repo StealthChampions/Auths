@@ -2,10 +2,10 @@
  * Settings Module | 设置模块
  *
  * Manages user settings with support for both local and sync storage.
- * Handles theme, language, zoom, smart filter, and other preferences.
+ * Handles theme, language, smart filter, and other preferences.
  *
  * 管理用户设置，支持本地存储和同步存储。
- * 处理主题、语言、缩放、智能过滤等偏好设置。
+ * 处理主题、语言、智能过滤等偏好设置。
  */
 
 // Storage Location Enum | 存储位置枚举
@@ -27,7 +27,6 @@ interface UserSettingsData {
   smartFilter?: boolean;
   theme?: string;
   themeColor?: string;
-  zoom?: number;
   language?: string;
 }
 
@@ -43,7 +42,9 @@ export class UserSettings {
   static items: UserSettingsData = {};
 
   static async updateItems() {
-    UserSettings.items = await UserSettings.getAllItems();
+    const items = await UserSettings.getAllItems();
+    delete (items as Record<string, unknown>).zoom;
+    UserSettings.items = items;
   }
 
   static async convertFromLocalStorage(
@@ -160,16 +161,13 @@ export class UserSettings {
 
 type BooleanOption = "smartFilter" | "webdavConfigured";
 
-type NumberOption = "autolock" | "lastRemindingBackupTime" | "offset" | "zoom";
+type NumberOption = "autolock" | "lastRemindingBackupTime" | "offset";
 
 function isBooleanOption(key: string): key is BooleanOption {
   return ["smartFilter", "webdavConfigured"].includes(key);
 }
 
 function isNumberOption(key: string): key is NumberOption {
-  return ["autolock", "lastRemindingBackupTime", "offset", "zoom"].includes(
-    key
-  );
+  return ["autolock", "lastRemindingBackupTime", "offset"].includes(key);
 }
-
 

@@ -3,13 +3,12 @@ import type { ThemePreference } from '@/utils/theme';
 /**
  * Menu Reducer | 菜单 Reducer
  *
- * Manages menu and settings state including theme, zoom, language, etc.
- * 管理菜单和设置状态，包括主题、缩放、语言等。
+ * Manages menu and settings state including theme, language, etc.
+ * 管理菜单和设置状态，包括主题、语言等。
  */
 
 export interface MenuState {
   version: string;
-  zoom: number;
   smartFilter: boolean;
   theme: ThemePreference;
   autolock: number;
@@ -17,7 +16,7 @@ export interface MenuState {
 }
 
 export type MenuAction =
-  | { type: 'setZoom'; payload: number }
+  | { type: 'init' }
   | { type: 'setSmartFilter'; payload: boolean }
   | { type: 'setTheme'; payload: ThemePreference }
   | { type: 'setAutolock'; payload: number }
@@ -26,7 +25,6 @@ export type MenuAction =
 
 const initialState: MenuState = {
   version: '1.0.4',
-  zoom: 100,
   smartFilter: true,
   theme: 'system',
   autolock: 0,
@@ -35,11 +33,8 @@ const initialState: MenuState = {
 
 export function menuReducer(state = initialState, action: MenuAction): MenuState {
   switch (action.type) {
-    case 'setZoom':
-      return {
-        ...state,
-        zoom: action.payload
-      };
+    case 'init':
+      return state;
 
     case 'setSmartFilter':
       return {

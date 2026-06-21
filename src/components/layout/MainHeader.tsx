@@ -14,7 +14,7 @@ const AuthsLogo = () => (
   <img
     src="/images/icon128.png"
     alt="Auths"
-    style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+    className="logo-image"
   />
 );
 
@@ -58,6 +58,7 @@ export default function MainHeader({ onSettingsClick, onEditToggle, isEditing }:
       <div className="header-actions">
         {onEditToggle && (
           <button
+            type="button"
             className={`icon-btn ${isEditing ? 'active' : ''}`}
             onClick={onEditToggle}
             title={isEditing ? t('done') : t('edit')}
@@ -68,6 +69,7 @@ export default function MainHeader({ onSettingsClick, onEditToggle, isEditing }:
         )}
 
         <button
+          type="button"
           className="icon-btn"
           onClick={onSettingsClick}
           title={t('settings')}

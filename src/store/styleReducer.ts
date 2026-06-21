@@ -10,6 +10,7 @@ export interface StyleState {
 }
 
 export type StyleAction =
+  | { type: 'init' }
   | { type: 'startEdit' }
   | { type: 'stopEdit' };
 
@@ -19,6 +20,9 @@ const initialState: StyleState = {
 
 export function styleReducer(state = initialState, action: StyleAction): StyleState {
   switch (action.type) {
+    case 'init':
+      return state;
+
     case 'startEdit':
       return {
         ...state,

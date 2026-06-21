@@ -17,7 +17,7 @@
 - **Organized**: Group accounts into folders with custom icons. The **Smart Filter** shows relevant accounts for the current website.
 - **Brand Icons**: Automatically matches icons for popular services.
 - **Real-time TOTP**: Accurate code generation with progress indicators.
-- **Cloud Sync (Optional)**: Backup and sync your encrypted vault via **WebDAV** (Google Drive and Dropbox support coming soon).
+- **Cloud Sync (Optional)**: Backup and sync your encrypted vault via **WebDAV**.
 - **QR Code Scanner**: Scan QR codes directly from webpages to add accounts.
 
 ---
@@ -58,7 +58,7 @@
    ```bash
    npm run build
    ```
-   The output `zip` and folder will be generating in the `.output/` directory.
+   The output `zip` and folder will be generated in the `.output/` directory.
 
 ### Loading Manually
 

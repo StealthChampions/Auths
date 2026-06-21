@@ -8,18 +8,28 @@ import { generateEntryHash } from '@/utils/accounts';
  */
 
 export interface AccountsState {
-  entries: any[];
+  entries: OTPEntryInterface[];
   filter: string;
   showSearch: boolean;
   shouldShowPassphrase: boolean;
   defaultEncryption?: string;
-  encryption: any;
+  encryption: EncryptionInterface | null;
   initComplete: boolean;
 }
 
+type NewAccountEntry = Partial<OTPEntryInterface> & {
+  issuer: string;
+  account: string;
+  secret: string | null;
+  type: number;
+  period: number;
+  digits: number;
+  algorithm: number;
+};
+
 export type AccountsAction =
-  | { type: 'updateCodes' }
-  | { type: 'setEntries'; payload: any[] }
+  | { type: 'init' }
+  | { type: 'setEntries'; payload: OTPEntryInterface[] }
   | { type: 'setFilter'; payload: string }
   | { type: 'showSearch' }
   | { type: 'hideSearch' }
@@ -27,11 +37,10 @@ export type AccountsAction =
   | { type: 'initComplete' }
   | { type: 'setShouldShowPassphrase'; payload: boolean }
   | { type: 'setDefaultEncryption'; payload: string }
-  | { type: 'setEncryption'; payload: any }
-  | { type: 'showNotification' }
+  | { type: 'setEncryption'; payload: EncryptionInterface | null }
   | { type: 'pinEntry'; payload: string }
   | { type: 'deleteCode'; payload: string }
-  | { type: 'addCode'; payload: any }
+  | { type: 'addCode'; payload: NewAccountEntry }
   | { type: 'updateEntry'; payload: { hash: string; issuer?: string; account?: string; folder?: string; period?: number; digits?: number; icon?: string } }
   | { type: 'moveEntryUp'; payload: string }
   | { type: 'moveEntryDown'; payload: string }
@@ -48,15 +57,8 @@ const initialState: AccountsState = {
 
 export function accountsReducer(state = initialState, action: AccountsAction): AccountsState {
   switch (action.type) {
-    case 'updateCodes':
-      // Update OTP codes for all entries
-      return {
-        ...state,
-        entries: state.entries.map(entry => ({
-          ...entry,
-          code: generateOTPCode(entry) // This would be implemented
-        }))
-      };
+    case 'init':
+      return state;
 
     case 'setEntries':
       return {
@@ -112,10 +114,6 @@ export function accountsReducer(state = initialState, action: AccountsAction): A
         encryption: action.payload
       };
 
-    case 'showNotification':
-      // This would typically be handled by the notification reducer
-      return state;
-
     case 'pinEntry':
       const pinnedEntries = state.entries.map(entry =>
         entry.hash === action.payload
@@ -139,11 +137,12 @@ export function accountsReducer(state = initialState, action: AccountsAction): A
 
     case 'addCode':
       // 生成唯一 hash
-      const newEntry = {
+      const newEntry: OTPEntryInterface = {
         ...action.payload,
         hash: action.payload.hash || generateEntryHash(),
         pinned: false,
         code: '',
+        counter: action.payload.counter ?? 0,
       };
       const newEntries = [...state.entries, newEntry];
       // 保存到 storage
@@ -254,17 +253,11 @@ export function accountsReducer(state = initialState, action: AccountsAction): A
 }
 
 // 保存 entries 到 chrome.storage 并更新修改时间戳
-function saveEntriesToStorage(entries: any[]) {
+function saveEntriesToStorage(entries: OTPEntryInterface[]) {
   if (typeof chrome !== 'undefined' && chrome.storage) {
     chrome.storage.local.set({
       entries,
       entriesLastModified: Date.now()
     });
   }
-}
-
-// Helper function to generate OTP code (placeholder)
-function generateOTPCode(entry: any): string {
-  // This would implement the actual OTP generation logic
-  return '123456';
 }

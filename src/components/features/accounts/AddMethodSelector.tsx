@@ -10,6 +10,7 @@ import jsQR from 'jsqr';
 import { useAccounts, useNotification } from '@/store';
 import { useI18n } from '@/i18n';
 import { hasDuplicateSecret } from '@/utils/accounts';
+import { debugError, debugLog } from '@/utils/logger';
 
 // SVG Icons | SVG 图标
 const CloseIcon = () => (
@@ -159,10 +160,10 @@ export default function AddMethodSelector({ onClose, onSuccess, onManualEntry }:
   };
 
   const handleQRCodeDetected = (qrData: string) => {
-    console.log('[Auths] QR Code detected:', qrData);
+    debugLog('[Auths] QR code detected');
     try {
       const accountData = parseOtpAuthUrl(qrData);
-      console.log('[Auths] Parsed account data:', accountData);
+      debugLog('[Auths] Parsed QR account');
 
       // Check for duplicate account by secret, consistent with import/sync paths.
       // 仅基于 secret 检查重复（与导入/同步逻辑保持一致）
@@ -180,17 +181,17 @@ export default function AddMethodSelector({ onClose, onSuccess, onManualEntry }:
 
       // Show success notification
       notificationDispatch({ type: 'success', payload: t('account_added_successfully') });
-      console.log('[Auths] Account added successfully');
+      debugLog('[Auths] Account added successfully');
 
       onSuccess();
     } catch (err) {
-      console.error('[Auths] QR parse error:', err);
+      debugError('[Auths] QR parse error:', err);
       showError(err instanceof Error ? err.message : t('qr_error_unknown'));
     }
   };
 
   const processImage = async (dataUrl: string): Promise<void> => {
-    console.log('[Auths] Processing image for QR code...');
+    debugLog('[Auths] Processing image for QR code');
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
@@ -222,22 +223,22 @@ export default function AddMethodSelector({ onClose, onSuccess, onManualEntry }:
         });
 
         if (code) {
-          console.log('[Auths] QR code found (normal):', code.data);
+          debugLog('[Auths] QR code found in normal mode');
           handleQRCodeDetected(code.data);
           resolve();
         } else {
           // Try with inverted colors
-          console.log('[Auths] No QR code found with normal mode, trying inverted...');
+          debugLog('[Auths] No QR code found in normal mode, trying inverted');
           const invertedCode = jsQR(imageData.data, imageData.width, imageData.height, {
             inversionAttempts: 'attemptBoth',
           });
 
           if (invertedCode) {
-            console.log('[Auths] QR code found (inverted):', invertedCode.data);
+            debugLog('[Auths] QR code found in inverted mode');
             handleQRCodeDetected(invertedCode.data);
             resolve();
           } else {
-            console.log('[Auths] No QR code found in image');
+            debugLog('[Auths] No QR code found in image');
             showError(t('qr_error_not_found'));
             resolve();
           }
@@ -279,7 +280,7 @@ export default function AddMethodSelector({ onClose, onSuccess, onManualEntry }:
         action: 'startRegionSelection'
       });
 
-      console.log('[Auths Popup] Region selection response:', response);
+      debugLog('[Auths Popup] Region selection response:', response);
 
       if (response.error) {
         if (response.error === 'Selection cancelled') {
@@ -374,7 +375,7 @@ export default function AddMethodSelector({ onClose, onSuccess, onManualEntry }:
   };
 
   return (
-    <div className="add-method-selector" style={{ position: 'relative' }}>
+    <div className="add-method-selector">
       <div className="form-header">
         <h2>{t('add_account')}</h2>
         <button className="icon-btn" onClick={onClose} title={t('close')} aria-label={t('close')}>
@@ -448,10 +449,10 @@ export default function AddMethodSelector({ onClose, onSuccess, onManualEntry }:
         type="file"
         accept="image/*"
         onChange={handleFileUpload}
-        style={{ display: 'none' }}
+        className="hidden-file-input"
       />
 
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      <canvas ref={canvasRef} className="hidden-canvas" />
     </div>
   );
 }

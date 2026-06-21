@@ -11,6 +11,7 @@ export interface BackupState {
 }
 
 export type BackupAction =
+  | { type: 'init' }
   | { type: 'setWebdavConfigured'; payload: boolean }
   | { type: 'setLastBackupTime'; payload: number };
 
@@ -20,6 +21,9 @@ const initialState: BackupState = {
 
 export function backupReducer(state = initialState, action: BackupAction): BackupState {
   switch (action.type) {
+    case 'init':
+      return state;
+
     case 'setWebdavConfigured':
       return { ...state, webdavConfigured: action.payload };
 

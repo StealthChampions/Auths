@@ -2,13 +2,13 @@
  * Popup Component | Popup 主组件
  *
  * Main popup component for the extension.
- * Manages app state, theme, zoom, and renders main UI.
+ * Manages app state, theme, and renders main UI.
  *
  * 扩展的主 Popup 组件。
- * 管理应用状态、主题、缩放，并渲染主界面。
+ * 管理应用状态、主题，并渲染主界面。
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { useStyle, useMenu, useNotification, useAccounts } from '@/store';
 import { UserSettings } from '@/models/settings';
 import { addLocalizedSyncLog } from '@/utils/sync-logger';
@@ -16,10 +16,13 @@ import { dedupeAccountsBySecret } from '@/utils/accounts';
 import { decryptWebDAVPassword, migratePlainWebDAVConfig } from '@/utils/webdav-credentials';
 import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, uploadWebDAVBackup } from '@/utils/webdav-sync';
 import { applyThemePreference, normalizeThemePreference, resolveThemePreference } from '@/utils/theme';
+import { debugError, debugLog } from '@/utils/logger';
 import MainHeader from '@/components/layout/MainHeader';
 import MainBody from '@/components/layout/MainBody';
-import Settings from '@/components/features/settings/Settings';
+import '@/assets/styles/components.css';
 import '@/assets/styles/notification.css';
+
+const Settings = React.lazy(() => import('@/components/features/settings/Settings'));
 
 export default function Popup() {
   const { menu, dispatch: menuDispatch } = useMenu();
@@ -61,7 +64,7 @@ export default function Popup() {
           // Update storage if duplicates were removed (don't update timestamp to avoid triggering sync)
           // 如果有重复被移除则更新存储（不更新时间戳以避免触发同步）
           if (removedDuplicates > 0) {
-            console.log(`[Auths] Auto cleanup: removed ${removedDuplicates} duplicate entries`);
+            debugLog(`[Auths] Auto cleanup: removed ${removedDuplicates} duplicate entries`);
             await chrome.storage.local.set({ entries: deduplicatedEntries });
           }
 
@@ -90,17 +93,6 @@ export default function Popup() {
       applyThemePreference(theme);
       menuDispatch({ type: 'setTheme', payload: theme });
 
-      // Zoom | 缩放
-      if (UserSettings.items.zoom) {
-        menuDispatch({ type: 'setZoom', payload: UserSettings.items.zoom });
-        const zoom = UserSettings.items.zoom;
-        if (zoom !== 100) {
-          document.body.style.marginBottom = 480 * (zoom / 100 - 1) + "px";
-          document.body.style.marginRight = 320 * (zoom / 100 - 1) + "px";
-          document.body.style.transform = "scale(" + zoom / 100 + ")";
-        }
-      }
-
       // Language | 语言
       if (UserSettings.items.language) {
         menuDispatch({ type: 'setLanguage', payload: UserSettings.items.language as string });
@@ -117,17 +109,17 @@ export default function Popup() {
         const config = await migratePlainWebDAVConfig(configResult.webdavConfig);
         const password = await decryptWebDAVPassword(config);
         if (config?.syncOnStartup && config?.serverUrl && config?.username && password) {
-          console.log('[Auths] Startup sync enabled, performing auto sync...');
+          debugLog('[Auths] Startup sync enabled, performing auto sync...');
 
           // Get local data and timestamps | 获取本地数据和时间戳
           const dataResult = await chrome.storage.local.get(['entries', 'entriesLastModified', 'lastSyncedTimestamp']);
-          const localEntries = dataResult.entries || [];
+          const localEntries: OTPEntryInterface[] = dataResult.entries || [];
           const localTimestamp = dataResult.entriesLastModified || 0;
           const lastSyncedTimestamp = dataResult.lastSyncedTimestamp || 0;
 
           // Skip if already synced and no local changes | 已同步且无本地变更则跳过
           if (lastSyncedTimestamp > 0 && localTimestamp <= lastSyncedTimestamp) {
-            console.log('[Auths] Startup sync: no local changes, checking remote...');
+            debugLog('[Auths] Startup sync: no local changes, checking remote...');
           }
 
           // Get remote latest backup | 获取远程最新备份
@@ -136,8 +128,8 @@ export default function Popup() {
           // Sync logic | 同步逻辑
           if (latestRemote && latestRemote.timestamp > localTimestamp) {
             // Remote is newer, download | 远程更新，下载
-            console.log('[Auths] Startup sync: remote is newer, downloading...');
-            const backupData = await downloadWebDAVBackup(config.serverUrl, config.username, password, latestRemote.name);
+            debugLog('[Auths] Startup sync: remote is newer, downloading...');
+            const backupData = await downloadWebDAVBackup<OTPEntryInterface>(config.serverUrl, config.username, password, latestRemote.name);
             const allAccounts = [...localEntries, ...backupData.accounts];
             const {
               accounts: deduplicatedAccounts,
@@ -151,10 +143,10 @@ export default function Popup() {
               detailsKey: 'log_details_deduped',
               detailsArgs: [String(removedCount)]
             });
-            console.log(`[Auths] Startup sync: merged and deduplicated, removed ${removedCount} duplicates`);
+            debugLog(`[Auths] Startup sync: merged and deduplicated, removed ${removedCount} duplicates`);
           } else if (localTimestamp > lastSyncedTimestamp && localEntries.length > 0) {
             // Local has changes since last sync, upload | 本地自上次同步后有变更，上传
-            console.log('[Auths] Startup sync: local has changes since last sync, uploading...');
+            debugLog('[Auths] Startup sync: local has changes since last sync, uploading...');
 
             const {
               accounts: deduplicatedEntries,
@@ -164,7 +156,7 @@ export default function Popup() {
             if (removedDuplicates > 0) {
               await chrome.storage.local.set({ entries: deduplicatedEntries, entriesLastModified: Date.now() });
               accountsDispatch({ type: 'setEntries', payload: deduplicatedEntries });
-              console.log(`[Auths] Startup sync: removed ${removedDuplicates} duplicates`);
+              debugLog(`[Auths] Startup sync: removed ${removedDuplicates} duplicates`);
             }
 
             const filename = await uploadWebDAVBackup(config.serverUrl, config.username, password, deduplicatedEntries);
@@ -175,9 +167,9 @@ export default function Popup() {
               detailsArgs: [filename]
             });
 
-            console.log('[Auths] Startup sync: uploaded successfully');
+            debugLog('[Auths] Startup sync: uploaded successfully');
           } else {
-            console.log('[Auths] Startup sync: already up to date');
+            debugLog('[Auths] Startup sync: already up to date');
             await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {
               messageKey: 'log_startup_sync_skipped',
               detailsKey: 'log_details_local_remote_up_to_date'
@@ -202,7 +194,7 @@ export default function Popup() {
           }
         }
       } catch (err) {
-        console.log('[Auths] Startup sync failed:', err);
+        debugError('[Auths] Startup sync failed:', err);
       }
     };
     loadSettings();
@@ -261,40 +253,8 @@ export default function Popup() {
       <div
         className={`el-message el-message--${notification.severity}`}
         onClick={() => notificationDispatch({ type: 'clear' })}
-        style={{
-          position: 'fixed',
-          top: '20px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          minWidth: '300px',
-          maxWidth: '80%',
-          background:
-            notification.severity === 'success' ? '#f0f9eb' :
-              notification.severity === 'error' ? '#fef0f0' :
-                notification.severity === 'warning' ? '#fdf6ec' : '#f4f4f5',
-          borderColor:
-            notification.severity === 'success' ? '#e1f3d8' :
-              notification.severity === 'error' ? '#fde2e2' :
-                notification.severity === 'warning' ? '#faecd8' : '#e9e9eb',
-          color:
-            notification.severity === 'success' ? '#67c23a' :
-              notification.severity === 'error' ? '#f56c6c' :
-                notification.severity === 'warning' ? '#e6a23c' : '#909399',
-          borderRadius: '4px',
-          borderWidth: '1px',
-          borderStyle: 'solid',
-          display: 'flex',
-          alignItems: 'center',
-          zIndex: 2147483647,
-          padding: '10px 15px',
-          fontSize: '14px',
-          lineHeight: '1',
-          boxShadow: '0 2px 12px 0 rgba(0, 0, 0, 0.1)',
-          cursor: 'pointer',
-          transition: 'opacity 0.3s, transform 0.3s, top 0.4s'
-        }}
       >
-        <div style={{ marginRight: '10px', display: 'flex', alignItems: 'center' }}>
+        <div className="el-message-icon">
           {notification.severity === 'success' && (
             <svg viewBox="0 0 1024 1024" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
               <path fill="currentColor" d="M512 64a448 448 0 1 1 0 896 448 448 0 0 1 0-896zm-55.808 536.384-99.52-99.584a38.4 38.4 0 1 0-54.336 54.336l126.72 126.72a38.272 38.272 0 0 0 54.336 0l262.4-262.464a38.4 38.4 0 1 0-54.272-54.336L456.192 600.384z" />
@@ -316,7 +276,7 @@ export default function Popup() {
             </svg>
           )}
         </div>
-        <div style={{ flex: 1 }}>{notification.message}</div>
+        <div className="el-message-text">{notification.message}</div>
       </div>
     );
   };
@@ -330,7 +290,9 @@ export default function Popup() {
         onKeyDown={handleKeyDown}
       >
         {showSettings ? (
-          <Settings onClose={() => setShowSettings(false)} />
+          <Suspense fallback={null}>
+            <Settings onClose={() => setShowSettings(false)} />
+          </Suspense>
         ) : (
           <>
             <MainHeader

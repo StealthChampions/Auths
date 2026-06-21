@@ -16,7 +16,7 @@ import { UserSettings } from '@/models/settings';
 import { KeyUtilities } from '@/models/key-utilities';
 import { OTPType, OTPAlgorithm } from '@/models/otp';
 import { getIconUrl } from '@/utils/icon-map';
-import qrcode from 'qrcode-generator';
+import { debugError } from '@/utils/logger';
 
 // SVG Icons | SVG 图标
 const PinIcon = () => (
@@ -153,7 +153,7 @@ export default function EntryComponent({
         );
         setCode(newCode);
       } catch (err) {
-        console.error('Failed to generate TOTP:', err);
+        debugError('Failed to generate TOTP:', err);
         setCode('ERROR');
       }
     };
@@ -195,8 +195,16 @@ export default function EntryComponent({
       await navigator.clipboard.writeText(code);
       notificationDispatch({ type: 'success', payload: t('copied') });
     } catch (err) {
-      console.error('Failed to copy:', err);
+      debugError('Failed to copy:', err);
       notificationDispatch({ type: 'error', payload: t('copy_failed') });
+    }
+  };
+
+  const handleEntryKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.currentTarget !== e.target) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleCopy();
     }
   };
 
@@ -237,16 +245,21 @@ export default function EntryComponent({
     return `otpauth://${type}/${label}?${params.toString()}`;
   };
 
-  const handleShowQR = (e: React.MouseEvent) => {
+  const handleShowQR = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!entry.secret) return;
 
-    const uri = generateOTPUri();
-    const qr = qrcode(0, 'M');
-    qr.addData(uri);
-    qr.make();
-    setQrDataUrl(qr.createDataURL(4, 0));
-    setShowQR(true);
+    try {
+      const qrcode = (await import('qrcode-generator')).default;
+      const uri = generateOTPUri();
+      const qr = qrcode(0, 'M');
+      qr.addData(uri);
+      qr.make();
+      setQrDataUrl(qr.createDataURL(4, 0));
+      setShowQR(true);
+    } catch (err) {
+      debugError('Failed to generate QR code:', err);
+    }
   };
 
   const isHOTP = entry.type === 2;
@@ -267,6 +280,7 @@ export default function EntryComponent({
       className={classNames}
       tabIndex={tabindex}
       onClick={handleCopy}
+      onKeyDown={handleEntryKeyDown}
       role="button"
       aria-label={t('copy_code_for', [entry.issuer])}
       data-hash={entry.hash}
@@ -295,6 +309,7 @@ export default function EntryComponent({
         {!style.isEditing && (
           <div className="entry-actions-top">
             <button
+              type="button"
               className="action-btn qr-btn"
               onClick={handleShowQR}
               title={t('scan_qr_code')}
@@ -303,6 +318,7 @@ export default function EntryComponent({
               <QRCodeIcon />
             </button>
             <button
+              type="button"
               className="action-btn pin-btn"
               onClick={handlePin}
               title={entry.pinned ? t('unpin') : t('pin')}
@@ -317,6 +333,7 @@ export default function EntryComponent({
         {style.isEditing && (
           <div className="entry-actions-top">
             <button
+              type="button"
               className="action-btn move-btn move-up"
               onClick={(e) => {
                 e.stopPropagation();
@@ -330,6 +347,7 @@ export default function EntryComponent({
               </svg>
             </button>
             <button
+              type="button"
               className="action-btn move-btn move-down"
               onClick={(e) => {
                 e.stopPropagation();
@@ -343,6 +361,7 @@ export default function EntryComponent({
               </svg>
             </button>
             <button
+              type="button"
               className="action-btn edit-btn"
               onClick={handleEdit}
               title={t('edit')}
@@ -351,6 +370,7 @@ export default function EntryComponent({
               <EditIcon />
             </button>
             <button
+              type="button"
               className="action-btn delete-btn"
               onClick={handleDelete}
               title={t('delete')}
