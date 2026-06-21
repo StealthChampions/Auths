@@ -1349,5 +1349,128 @@
     "log_details_auto_backup_disabled": {
         "message": "Auto backup: disabled",
         "description": "Log details for disabled auto backup."
+    },
+    "cancel": {
+        "message": "Cancel"
+    },
+    "clipboard_auto_clear": {
+        "message": "Clipboard Auto-clear"
+    },
+    "clipboard_auto_clear_description": {
+        "message": "Clear the clipboard after a delay when you copy a verification code."
+    },
+    "clipboard_clear_15s": {
+        "message": "15 seconds"
+    },
+    "clipboard_clear_30s": {
+        "message": "30 seconds"
+    },
+    "clipboard_clear_60s": {
+        "message": "60 seconds"
+    },
+    "clipboard_clear_scheduled": {
+        "message": "Copied. Clipboard will clear in $1s."
+    },
+    "import_success_with_updates": {
+        "message": "Import complete. Added $1, updated $2."
+    },
+    "import_preview_title": {
+        "message": "Import Preview"
+    },
+    "preview_total": {
+        "message": "Total"
+    },
+    "preview_new": {
+        "message": "New"
+    },
+    "preview_updates": {
+        "message": "Updates"
+    },
+    "preview_duplicates": {
+        "message": "Duplicates"
+    },
+    "preview_after_merge": {
+        "message": "After Merge"
+    },
+    "import_preview_result": {
+        "message": "After import, this browser will have $1 account(s)."
+    },
+    "btn_preview_import": {
+        "message": "Preview"
+    },
+    "btn_confirm_import": {
+        "message": "Confirm Import"
+    },
+    "unknown_time": {
+        "message": "Unknown time"
+    },
+    "device_id_copied": {
+        "message": "Device ID copied"
+    },
+    "current_device": {
+        "message": "Current Device"
+    },
+    "copy_device_id": {
+        "message": "Copy ID"
+    },
+    "btn_load_backup_history": {
+        "message": "Backup History"
+    },
+    "backup_history_title": {
+        "message": "Backup History"
+    },
+    "backup_account_count": {
+        "message": "$1 account(s)"
+    },
+    "restore_preview_title": {
+        "message": "Restore Preview"
+    },
+    "restore_preview_result": {
+        "message": "After restore, this browser will have $1 account(s)."
+    },
+    "restore_success_with_updates": {
+        "message": "Restore complete. Added $1, updated $2."
+    },
+    "btn_confirm_restore": {
+        "message": "Confirm Restore"
+    },
+    "known_devices": {
+        "message": "Known Devices"
+    },
+    "current_device_badge": {
+        "message": "Current"
+    },
+    "device_backup_summary": {
+        "message": "$1 backup(s) · Last $2"
+    },
+    "sync_conflict_detected": {
+        "message": "Sync conflict detected"
+    },
+    "sync_conflict_title": {
+        "message": "Sync Conflict"
+    },
+    "sync_conflict_description": {
+        "message": "Both local data and the latest remote backup changed since the last sync. Remote backup time: $1."
+    },
+    "sync_conflict_merge": {
+        "message": "Merge"
+    },
+    "sync_conflict_use_local": {
+        "message": "Use Local"
+    },
+    "sync_conflict_use_remote": {
+        "message": "Use Remote"
+    },
+    "sync_conflict_resolved": {
+        "message": "Sync conflict resolved"
+    },
+    "sync_conflict_resolve_merge": {
+        "message": "Merged local and remote data"
+    },
+    "sync_conflict_resolve_local": {
+        "message": "Uploaded local data"
+    },
+    "sync_conflict_resolve_remote": {
+        "message": "Used remote backup"
     }
 }

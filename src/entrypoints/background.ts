@@ -10,7 +10,7 @@
 
 import { parseSiteName, countMatchedEntries } from '@/utils/site-match';
 import { dedupeAccountsBySecret, generateEntryHash, hasDuplicateSecret } from '@/utils/accounts';
-import { decryptWebDAVPassword, migratePlainWebDAVConfig } from '@/utils/webdav-credentials';
+import { decryptWebDAVPassword, loadWebDAVConfig } from '@/utils/webdav-credentials';
 import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, uploadWebDAVBackup } from '@/utils/webdav-sync';
 import { addLocalizedSyncLog } from '@/utils/sync-logger';
 import { debugError, debugLog } from '@/utils/logger';
@@ -94,8 +94,7 @@ export default defineBackground(() => {
 
       try {
         // Get WebDAV config | 获取 WebDAV 配置
-        const configResult = await chrome.storage.local.get(['webdavConfig']);
-        const config = await migratePlainWebDAVConfig(configResult.webdavConfig);
+        const config = await loadWebDAVConfig();
         const password = await decryptWebDAVPassword(config);
 
         if (!config || !config.serverUrl || !config.username || !password) {

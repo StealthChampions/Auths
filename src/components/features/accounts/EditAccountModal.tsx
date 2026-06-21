@@ -114,26 +114,30 @@ export default function EditAccountModal({ entry, onClose, onSave }: EditAccount
         <div className="form-row">
           <div className="form-group">
             <label htmlFor="edit-period">{t('refresh_period')}</label>
-            <select
-              id="edit-period"
-              value={period}
-              onChange={(e) => setPeriod(Number(e.target.value))}
-            >
-              <option value={30}>30 {t('seconds')}</option>
-              <option value={60}>60 {t('seconds')}</option>
-            </select>
+            <span className="select-control">
+              <select
+                id="edit-period"
+                value={period}
+                onChange={(e) => setPeriod(Number(e.target.value))}
+              >
+                <option value={30}>30 {t('seconds')}</option>
+                <option value={60}>60 {t('seconds')}</option>
+              </select>
+            </span>
           </div>
 
           <div className="form-group">
             <label htmlFor="edit-digits">{t('code_length')}</label>
-            <select
-              id="edit-digits"
-              value={digits}
-              onChange={(e) => setDigits(Number(e.target.value))}
-            >
-              <option value={6}>6 {t('digits')}</option>
-              <option value={8}>8 {t('digits')}</option>
-            </select>
+            <span className="select-control">
+              <select
+                id="edit-digits"
+                value={digits}
+                onChange={(e) => setDigits(Number(e.target.value))}
+              >
+                <option value={6}>6 {t('digits')}</option>
+                <option value={8}>8 {t('digits')}</option>
+              </select>
+            </span>
           </div>
         </div>
 

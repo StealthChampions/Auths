@@ -12,6 +12,7 @@ export interface MenuState {
   smartFilter: boolean;
   theme: ThemePreference;
   autolock: number;
+  clipboardClearSeconds: number;
   language: string;
 }
 
@@ -20,6 +21,7 @@ export type MenuAction =
   | { type: 'setSmartFilter'; payload: boolean }
   | { type: 'setTheme'; payload: ThemePreference }
   | { type: 'setAutolock'; payload: number }
+  | { type: 'setClipboardClearSeconds'; payload: number }
   | { type: 'setVersion'; payload: string }
   | { type: 'setLanguage'; payload: string };
 
@@ -28,6 +30,7 @@ const initialState: MenuState = {
   smartFilter: true,
   theme: 'system',
   autolock: 0,
+  clipboardClearSeconds: 0,
   language: 'system',
 };
 
@@ -52,6 +55,12 @@ export function menuReducer(state = initialState, action: MenuAction): MenuState
       return {
         ...state,
         autolock: action.payload
+      };
+
+    case 'setClipboardClearSeconds':
+      return {
+        ...state,
+        clipboardClearSeconds: action.payload
       };
 
     case 'setVersion':

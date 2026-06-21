@@ -16,6 +16,7 @@ import { UserSettings } from '@/models/settings';
 import { KeyUtilities } from '@/models/key-utilities';
 import { OTPType, OTPAlgorithm } from '@/models/otp';
 import { getIconUrl } from '@/utils/icon-map';
+import { scheduleClipboardClear } from '@/utils/clipboard';
 import { debugError } from '@/utils/logger';
 
 // SVG Icons | SVG 图标
@@ -193,7 +194,16 @@ export default function EntryComponent({
 
     try {
       await navigator.clipboard.writeText(code);
-      notificationDispatch({ type: 'success', payload: t('copied') });
+      const clipboardClearSeconds = Number(UserSettings.items.clipboardClearSeconds || 0);
+      if (clipboardClearSeconds > 0) {
+        scheduleClipboardClear(code, clipboardClearSeconds);
+        notificationDispatch({
+          type: 'success',
+          payload: t('clipboard_clear_scheduled', [String(clipboardClearSeconds)]),
+        });
+      } else {
+        notificationDispatch({ type: 'success', payload: t('copied') });
+      }
     } catch (err) {
       debugError('Failed to copy:', err);
       notificationDispatch({ type: 'error', payload: t('copy_failed') });
