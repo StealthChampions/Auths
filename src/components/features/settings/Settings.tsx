@@ -313,7 +313,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
 
 
         {activeSection === 'backup' && (
-          <div className="settings-section">
+          <div className="settings-section settings-section-compact">
             <h3>{t('backup_restore')}</h3>
 
             <div className="setting-item setting-row backup-setting-row">
@@ -355,7 +355,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
         )}
 
         {activeSection === 'backup' && (
-          <div className="settings-section danger-zone">
+          <div className="settings-section settings-section-compact danger-zone">
             <h3>{t('danger_zone')}</h3>
 
             <div className="setting-item setting-row backup-setting-row danger-setting-row">
