@@ -1,6 +1,6 @@
 # Privacy Policy | 隐私政策
 
-**Last Updated | 最后更新:** June 8, 2026
+**Last Updated | 最后更新:** June 21, 2026
 
 ---
 
@@ -45,6 +45,8 @@ All your data is stored **locally** on your device:
 
 - **Account secrets**: Stored securely in your browser's local storage
 - **Settings and preferences**: Stored in your browser's local storage
+- **WebDAV configuration**: Stored locally when you enable WebDAV. The WebDAV password is encrypted before being stored locally, and the encryption key remains in your browser.
+- **WebDAV device ID**: A random per-install device ID is stored locally and used only in WebDAV backup filenames to keep retention cleanup scoped to the current browser profile.
 - **No cloud storage by default**: Your data never leaves your device unless you explicitly enable optional backup features
 
 **中文：**
@@ -52,6 +54,8 @@ All your data is stored **locally** on your device:
 
 - **账户密钥**：安全存储在浏览器的本地存储中
 - **设置和偏好**：存储在浏览器的本地存储中
+- **WebDAV 配置**：仅在您启用 WebDAV 时本地保存。WebDAV 密码会先加密再保存到本地，加密密钥保留在您的浏览器中。
+- **WebDAV 设备 ID**：随机生成的每安装实例设备 ID 会本地保存，仅用于 WebDAV 备份文件名，以便保留策略只清理当前浏览器配置生成的备份。
 - **默认无云存储**：除非您明确启用可选备份功能，否则数据永远不会离开您的设备
 
 ---
@@ -65,6 +69,7 @@ If you choose to enable WebDAV backup:
 - We do not have access to your WebDAV credentials or data
 - You are responsible for the security of your WebDAV server
 - Host permissions are requested **per-server** only when you configure backup
+- Backup filenames include a local random device ID so cleanup only removes backups created by the current browser profile. Older legacy backup filenames remain readable/restorable and are not proactively deleted by the retention policy.
 
 **中文：**
 如果您选择启用 WebDAV 备份：
@@ -73,6 +78,7 @@ If you choose to enable WebDAV backup:
 - 我们无法访问您的 WebDAV 凭据或数据
 - 您需要自行负责 WebDAV 服务器的安全
 - 仅在您配置备份时**按服务器**请求主机权限
+- 备份文件名会包含本地随机设备 ID，因此保留策略只删除当前浏览器配置创建的备份。旧版文件名的备份仍可读取/恢复，保留策略不会主动删除这些旧备份。
 
 ---
 
@@ -112,10 +118,10 @@ If you choose to enable WebDAV backup:
 The extension only makes network requests when:
 
 1. User initiates "Sync Time" with Google servers (to correct time drift)
-2. User manually triggers WebDAV backup/restore to their own server
+2. User configures or uses WebDAV backup/restore/sync to their own server, including optional startup sync and scheduled auto-backup if enabled
 3. The browser loads a site icon via `www.google.com/s2/favicons` for entries that have no custom icon (image request only, no account data is sent)
 
-All network requests are user-initiated and visible to the user. The optional
+All network requests require user-enabled features or user action. The optional
 "Show match count on icon" feature reads the active tab's URL and title only
 in-memory to compare against your locally stored issuers/accounts; nothing is
 ever uploaded.
@@ -124,10 +130,10 @@ ever uploaded.
 扩展仅在以下情况下发起网络请求：
 
 1. 用户启动与 Google 服务器的"时间同步"（用于校正时间偏差）
-2. 用户手动触发到自己服务器的 WebDAV 备份/恢复
+2. 用户配置或使用到自己服务器的 WebDAV 备份/恢复/同步，包括启用后的启动同步和定时自动备份
 3. 浏览器为无自定义图标的账户从 `www.google.com/s2/favicons` 加载站点图标（仅图片请求，不发送账户数据）
 
-所有网络请求均由用户主动发起且对用户可见。可选的"图标显示匹配数量"功能仅在
+所有网络请求都需要用户启用相关功能或主动操作。可选的"图标显示匹配数量"功能仅在
 内存中读取当前标签页的 URL 与标题，用于与本地保存的 issuer/account 字段比较，
 不会上传任何数据。
 

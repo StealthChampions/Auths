@@ -334,40 +334,8 @@
     "message": "深色",
     "description": "Dark theme"
   },
-  "theme_simple": {
-    "message": "简约",
-    "description": "Simple theme"
-  },
-  "theme_compact": {
-    "message": "精简视图",
-    "description": "Compact theme"
-  },
-  "theme_high_contrast": {
-    "message": "高对比度",
-    "description": "High Contrast theme"
-  },
-  "theme_flat": {
-    "message": "扁平",
-    "description": "Flat theme"
-  },
-  "theme_violet": {
-    "message": "紫罗兰",
-    "description": "Violet theme"
-  },
-  "theme_emerald": {
-    "message": "翡翠绿",
-    "description": "Emerald theme"
-  },
-  "theme_sunset": {
-    "message": "日落橙",
-    "description": "Sunset theme"
-  },
-  "theme_ocean": {
-    "message": "海洋蓝",
-    "description": "Ocean theme"
-  },
   "theme_description": {
-    "message": "选择外观主题",
+    "message": "选择浅色、深色或跟随系统外观",
     "description": "Theme description"
   },
   "storage_sync_info": {
@@ -1078,6 +1046,14 @@
   "retain_forever": {
     "message": "永久保留",
     "description": "Retain forever."
+  },
+  "retention_cleanup_done": {
+    "message": "备份保留策略已执行",
+    "description": "Retention cleanup completed."
+  },
+  "retention_cleanup_failed": {
+    "message": "备份成功，但保留策略执行失败",
+    "description": "Retention cleanup failed."
   },
   "btn_save_config": {
     "message": "保存配置",

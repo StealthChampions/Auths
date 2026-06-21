@@ -12,6 +12,10 @@ import React, { useState, useEffect } from 'react';
 import { useStyle, useMenu, useNotification, useAccounts } from '@/store';
 import { UserSettings } from '@/models/settings';
 import { addSyncLog } from '@/utils/sync-logger';
+import { dedupeAccountsBySecret } from '@/utils/accounts';
+import { decryptWebDAVPassword, migratePlainWebDAVConfig } from '@/utils/webdav-credentials';
+import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, uploadWebDAVBackup } from '@/utils/webdav-sync';
+import { applyThemePreference, normalizeThemePreference, resolveThemePreference } from '@/utils/theme';
 import MainHeader from '@/components/layout/MainHeader';
 import MainBody from '@/components/layout/MainBody';
 import Settings from '@/components/features/settings/Settings';
@@ -36,6 +40,7 @@ export default function Popup() {
       }, 2000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [notification.message, notification.mode]);
 
   // Load entries from storage on mount
@@ -48,26 +53,15 @@ export default function Popup() {
           const entries = result.entries;
 
           // Auto deduplicate on load | 加载时自动去重
-          const normalizeSecret = (s: string) => s ? s.toUpperCase().replace(/\s/g, '') : '';
-          const seenSecrets = new Set<string>();
-          const seenHashes = new Set<string>();
-          const generateHash = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
-
-          const deduplicatedEntries = entries.filter((acc: any) => {
-            const normalizedSecret = normalizeSecret(acc.secret);
-            if (normalizedSecret && seenSecrets.has(normalizedSecret)) return false;
-            if (!acc.hash || seenHashes.has(acc.hash)) {
-              acc.hash = generateHash();
-            }
-            if (normalizedSecret) seenSecrets.add(normalizedSecret);
-            seenHashes.add(acc.hash);
-            return true;
-          });
+          const {
+            accounts: deduplicatedEntries,
+            removedDuplicates,
+          } = dedupeAccountsBySecret(entries);
 
           // Update storage if duplicates were removed (don't update timestamp to avoid triggering sync)
           // 如果有重复被移除则更新存储（不更新时间戳以避免触发同步）
-          if (deduplicatedEntries.length < entries.length) {
-            console.log(`[Auths] Auto cleanup: removed ${entries.length - deduplicatedEntries.length} duplicate entries`);
+          if (removedDuplicates > 0) {
+            console.log(`[Auths] Auto cleanup: removed ${removedDuplicates} duplicate entries`);
             await chrome.storage.local.set({ entries: deduplicatedEntries });
           }
 
@@ -88,8 +82,12 @@ export default function Popup() {
       await UserSettings.updateItems();
 
       // Theme | 主题
-      const theme = (UserSettings.items.theme as string) || 'light';
-      document.documentElement.setAttribute('data-theme', theme);
+      const theme = normalizeThemePreference(UserSettings.items.theme as string);
+      if (UserSettings.items.theme !== theme) {
+        UserSettings.items.theme = theme;
+        UserSettings.commitItems();
+      }
+      applyThemePreference(theme);
       menuDispatch({ type: 'setTheme', payload: theme });
 
       // Zoom | 缩放
@@ -116,8 +114,9 @@ export default function Popup() {
       // Sync on startup | 启动时自动同步
       try {
         const configResult = await chrome.storage.local.get(['webdavConfig']);
-        const config = configResult.webdavConfig;
-        if (config?.syncOnStartup && config?.serverUrl && config?.username && config?.password) {
+        const config = await migratePlainWebDAVConfig(configResult.webdavConfig);
+        const password = await decryptWebDAVPassword(config);
+        if (config?.syncOnStartup && config?.serverUrl && config?.username && password) {
           console.log('[Auths] Startup sync enabled, performing auto sync...');
 
           // Get local data and timestamps | 获取本地数据和时间戳
@@ -132,117 +131,61 @@ export default function Popup() {
           }
 
           // Get remote latest backup | 获取远程最新备份
-          const propfindResponse = await fetch(config.serverUrl, {
-            method: 'PROPFIND',
-            headers: {
-              'Authorization': 'Basic ' + btoa(`${config.username}:${config.password}`),
-              'Depth': '1',
-              'Content-Type': 'application/xml'
-            },
-            body: `<?xml version="1.0" encoding="utf-8" ?>
-              <D:propfind xmlns:D="DAV:">
-                <D:prop><D:displayname/><D:getlastmodified/></D:prop>
-              </D:propfind>`
-          });
+          const latestRemote = await getLatestWebDAVBackup(config.serverUrl, config.username, password);
 
-          if (propfindResponse.ok) {
-            const text = await propfindResponse.text();
-            const parser = new DOMParser();
-            const xml = parser.parseFromString(text, 'text/xml');
-            const responses = xml.getElementsByTagNameNS('DAV:', 'response');
+          // Sync logic | 同步逻辑
+          if (latestRemote && latestRemote.timestamp > localTimestamp) {
+            // Remote is newer, download | 远程更新，下载
+            console.log('[Auths] Startup sync: remote is newer, downloading...');
+            const backupData = await downloadWebDAVBackup(config.serverUrl, config.username, password, latestRemote.name);
+            const allAccounts = [...localEntries, ...backupData.accounts];
+            const {
+              accounts: deduplicatedAccounts,
+              removedDuplicates: removedCount,
+            } = dedupeAccountsBySecret(allAccounts, { duplicatePreference: 'last' });
 
-            // Find latest remote backup | 找到最新的远程备份
-            let latestRemote: { name: string; timestamp: number } | null = null;
-            for (let i = 0; i < responses.length; i++) {
-              const href = responses[i].getElementsByTagNameNS('DAV:', 'href')[0]?.textContent || '';
-              const lastMod = responses[i].getElementsByTagNameNS('DAV:', 'getlastmodified')[0]?.textContent || '';
-              if (href.includes('auths-backup') && href.endsWith('.json')) {
-                const ts = lastMod ? new Date(lastMod).getTime() : 0;
-                if (!latestRemote || ts > latestRemote.timestamp) {
-                  latestRemote = { name: decodeURIComponent(href.split('/').pop() || ''), timestamp: ts };
-                }
-              }
+            await chrome.storage.local.set({ entries: deduplicatedAccounts, entriesLastModified: Date.now(), lastSyncedTimestamp: Date.now() });
+            accountsDispatch({ type: 'setEntries', payload: deduplicatedAccounts });
+            await addSyncLog('INFO', 'BACKUP_SUCCESS', '启动同步成功（下载）', `去重 ${removedCount} 个账户`);
+            console.log(`[Auths] Startup sync: merged and deduplicated, removed ${removedCount} duplicates`);
+          } else if (localTimestamp > lastSyncedTimestamp && localEntries.length > 0) {
+            // Local has changes since last sync, upload | 本地自上次同步后有变更，上传
+            console.log('[Auths] Startup sync: local has changes since last sync, uploading...');
+
+            const {
+              accounts: deduplicatedEntries,
+              removedDuplicates,
+            } = dedupeAccountsBySecret(localEntries);
+
+            if (removedDuplicates > 0) {
+              await chrome.storage.local.set({ entries: deduplicatedEntries, entriesLastModified: Date.now() });
+              accountsDispatch({ type: 'setEntries', payload: deduplicatedEntries });
+              console.log(`[Auths] Startup sync: removed ${removedDuplicates} duplicates`);
             }
 
-            // Sync logic | 同步逻辑
-            if (latestRemote && latestRemote.timestamp > localTimestamp) {
-              // Remote is newer, download | 远程更新，下载
-              console.log('[Auths] Startup sync: remote is newer, downloading...');
-              const downloadUrl = config.serverUrl.endsWith('/')
-                ? `${config.serverUrl}${latestRemote.name}`
-                : `${config.serverUrl}/${latestRemote.name}`;
-              const downloadResp = await fetch(downloadUrl, {
-                method: 'GET',
-                headers: { 'Authorization': 'Basic ' + btoa(`${config.username}:${config.password}`) }
-              });
-              if (downloadResp.ok) {
-                const backupData = await downloadResp.json();
-                if (backupData.accounts && Array.isArray(backupData.accounts)) {
-                  // First merge all accounts | 先合并所有账户
-                  const allAccounts = [...localEntries, ...backupData.accounts];
+            const filename = await uploadWebDAVBackup(config.serverUrl, config.username, password, deduplicatedEntries);
+            await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
+            await addSyncLog('INFO', 'BACKUP_SUCCESS', '启动同步成功（上传）', `文件: ${filename}`);
 
-                  // Then deduplicate | 然后去重
-                  const normalizeSecret = (s: string) => s ? s.toUpperCase().replace(/\s/g, '') : '';
-                  const seenSecrets = new Set<string>();
-                  const seenHashes = new Set<string>();
-                  const generateHash = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+            console.log('[Auths] Startup sync: uploaded successfully');
+          } else {
+            console.log('[Auths] Startup sync: already up to date');
+            await addSyncLog('INFO', 'BACKUP_SUCCESS', '启动同步跳过', '本地和远程数据一致');
+            await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
+          }
 
-                  const deduplicatedAccounts = allAccounts.filter((acc: any) => {
-                    const normalizedSecret = normalizeSecret(acc.secret);
-                    if (normalizedSecret && seenSecrets.has(normalizedSecret)) return false;
-                    if (!acc.hash || seenHashes.has(acc.hash)) {
-                      acc.hash = generateHash();
-                    }
-                    if (normalizedSecret) seenSecrets.add(normalizedSecret);
-                    seenHashes.add(acc.hash);
-                    return true;
-                  });
-
-                  await chrome.storage.local.set({ entries: deduplicatedAccounts, entriesLastModified: Date.now(), lastSyncedTimestamp: Date.now() });
-                  accountsDispatch({ type: 'setEntries', payload: deduplicatedAccounts });
-                  const removedCount = allAccounts.length - deduplicatedAccounts.length;
-                  await addSyncLog('INFO', 'BACKUP_SUCCESS', '启动同步成功（下载）', `去重 ${removedCount} 个账户`);
-                  console.log(`[Auths] Startup sync: merged and deduplicated, removed ${removedCount} duplicates`);
-                }
-              }
-            } else if (localTimestamp > lastSyncedTimestamp && localEntries.length > 0) {
-              // Local has changes since last sync, upload | 本地自上次同步后有变更，上传
-              console.log('[Auths] Startup sync: local has changes since last sync, uploading...');
-
-              // Deduplicate before upload | 上传前去重
-              const seenSecrets = new Set<string>();
-              const deduplicatedEntries = localEntries.filter((acc: any) => {
-                const normalized = acc.secret ? acc.secret.toUpperCase().replace(/\s/g, '') : '';
-                if (normalized && seenSecrets.has(normalized)) return false;
-                if (normalized) seenSecrets.add(normalized);
-                return true;
-              });
-
-              // Update local if duplicates were removed | 如果有重复被移除则更新本地
-              if (deduplicatedEntries.length < localEntries.length) {
-                await chrome.storage.local.set({ entries: deduplicatedEntries, entriesLastModified: Date.now() });
-                accountsDispatch({ type: 'setEntries', payload: deduplicatedEntries });
-                console.log(`[Auths] Startup sync: removed ${localEntries.length - deduplicatedEntries.length} duplicates`);
-              }
-
-              const backupData = { version: '1.0', timestamp: Date.now(), accounts: deduplicatedEntries };
-              const filename = `auths-backup-${new Date().toISOString().slice(0, 10)}.json`;
-              const uploadUrl = config.serverUrl.endsWith('/') ? `${config.serverUrl}${filename}` : `${config.serverUrl}/${filename}`;
-              const uploadResp = await fetch(uploadUrl, {
-                method: 'PUT',
-                headers: { 'Authorization': 'Basic ' + btoa(`${config.username}:${config.password}`), 'Content-Type': 'application/json' },
-                body: JSON.stringify(backupData, null, 2)
-              });
-              if (uploadResp.ok || uploadResp.status === 201 || uploadResp.status === 204) {
-                await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
-                await addSyncLog('INFO', 'BACKUP_SUCCESS', '启动同步成功（上传）', `文件: ${filename}`);
-                console.log('[Auths] Startup sync: uploaded successfully');
-              }
-            } else {
-              console.log('[Auths] Startup sync: already up to date');
-              await addSyncLog('INFO', 'BACKUP_SUCCESS', '启动同步跳过', '本地和远程数据一致');
-              await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
+          try {
+            const cleanup = await cleanupExpiredWebDAVBackups(config.serverUrl, config.username, password, Number(config.retentionDays ?? 30));
+            if (!cleanup.skipped && (cleanup.deleted.length > 0 || cleanup.failed.length > 0)) {
+              await addSyncLog(
+                cleanup.failed.length > 0 ? 'WARN' : 'INFO',
+                'BACKUP_SUCCESS',
+                '备份保留策略已执行',
+                `删除 ${cleanup.deleted.length} 个过期备份, 失败 ${cleanup.failed.length} 个`
+              );
             }
+          } catch (cleanupError) {
+            await addSyncLog('WARN', 'BACKUP_SUCCESS', '备份成功，但保留策略执行失败', cleanupError instanceof Error ? cleanupError.message : '未知错误');
           }
         }
       } catch (err) {
@@ -252,22 +195,21 @@ export default function Popup() {
     loadSettings();
   }, []);
 
-  // Get theme class name | 获取主题类名
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const updateSystemTheme = () => {
+      if (menu.theme === 'system') {
+        applyThemePreference('system');
+      }
+    };
+
+    updateSystemTheme();
+    mediaQuery.addEventListener('change', updateSystemTheme);
+    return () => mediaQuery.removeEventListener('change', updateSystemTheme);
+  }, [menu.theme]);
+
   const getThemeClass = () => {
-    switch (menu.theme) {
-      case 'accessibility':
-        return 'theme-accessibility';
-      case 'dark':
-        return 'theme-dark';
-      case 'simple':
-        return 'theme-simple';
-      case 'compact':
-        return 'theme-compact';
-      case 'flat':
-        return 'theme-flat';
-      default:
-        return 'theme-normal';
-    }
+    return resolveThemePreference(menu.theme) === 'dark' ? 'theme-dark' : 'theme-light';
   };
 
   const handleMouseDown = () => {

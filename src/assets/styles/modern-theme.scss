@@ -68,55 +68,6 @@
 }
 
 // ========================================
-// Theme Variants
-// ========================================
-
-// Violet Theme
-// Violet Theme
-[data-theme="violet"] {
-  --color-primary: #7c3aed; // Violet 600
-  --color-primary-hover: #6d28d9; // Violet 700
-  --color-primary-light: #f5f3ff; // Violet 50 (Very subtle)
-
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f8fafc; // Slate 50 (Neutral base for comfort)
-  --color-bg-tertiary: #f3e8ff; // Violet 100 (Subtle highlight)
-}
-
-// Emerald Theme
-[data-theme="emerald"] {
-  --color-primary: #059669; // Emerald 600
-  --color-primary-hover: #047857; // Emerald 700
-  --color-primary-light: #ecfdf5; // Emerald 50
-
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f8fafc; // Slate 50
-  --color-bg-tertiary: #dcfce7; // Emerald 100
-}
-
-// Sunset Theme
-[data-theme="sunset"] {
-  --color-primary: #ea580c; // Orange 600
-  --color-primary-hover: #c2410c; // Orange 700
-  --color-primary-light: #fff7ed; // Orange 50
-
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f8fafc; // Slate 50
-  --color-bg-tertiary: #ffedd5; // Orange 100
-}
-
-// Ocean Theme
-[data-theme="ocean"] {
-  --color-primary: #0891b2; // Cyan 600
-  --color-primary-hover: #0e7490; // Cyan 700
-  --color-primary-light: #ecfeff; // Cyan 50
-
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f8fafc; // Slate 50
-  --color-bg-tertiary: #cffafe; // Cyan 100
-}
-
-// ========================================
 // Dark Mode Variables
 // ========================================
 [data-theme="dark"],

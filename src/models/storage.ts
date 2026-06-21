@@ -203,7 +203,7 @@ function isKey(key: unknown): key is Key {
 
 export class EntryStorage {
   private static getOTPStorageFromEntry(
-    entry: OTPEntry,
+    entry: OTPEntryInterface,
     unencrypted?: boolean
   ): OTPStorage {
     let secret: string;
@@ -212,7 +212,7 @@ export class EntryStorage {
         dataType: DataType.EncOTPStorage,
         keyId: entry.keyId,
         data: entry.encData,
-        index: entry.index,
+        index: entry.index || 0,
       };
     } else if (entry.secret) {
       secret = entry.secret;
@@ -231,7 +231,7 @@ export class EntryStorage {
     const storageItem: RawOTPStorage = {
       encrypted,
       hash: entry.hash,
-      index: entry.index,
+      index: entry.index || 0,
       type: OTPType[entry.type],
       secret,
     };
@@ -283,7 +283,7 @@ export class EntryStorage {
         dataType: DataType.EncOTPStorage,
         data: encData,
         keyId: entry.encryption.getEncryptionKeyId(),
-        index: entry.index,
+        index: entry.index || 0,
       };
     } else if (encrypted) {
       // Could not encrypt malformed entry - don't log details for security
@@ -431,7 +431,7 @@ export class EntryStorage {
 
       if (!encrypted) {
         // decrypt the data to export
-        if (entry.encrypted) {
+        if (entry.encrypted && entry.secret) {
           const decryptedSecret = encryption.decryptSecretString(entry.secret);
           if (decryptedSecret !== entry.secret && decryptedSecret !== null) {
             entry.secret = decryptedSecret;
@@ -439,7 +439,7 @@ export class EntryStorage {
           }
         }
         // we need correct hash
-        if (hash !== entry.hash) {
+        if (entry.hash && hash !== entry.hash) {
           _data[entry.hash] = entry;
           delete _data[hash];
         }
@@ -608,6 +608,9 @@ export class EntryStorage {
       const entryData = _data[hash];
 
       if (entryData.dataType === "EncOTPStorage") {
+        if (!entryData.data || !entryData.keyId) {
+          continue;
+        }
         data.push(
           new OTPEntry({
             encrypted: true,
@@ -656,11 +659,11 @@ export class EntryStorage {
 
       const entry = new OTPEntry({
         account: entryData.account,
-        encrypted: entryData.encrypted,
-        hash: entryData.hash,
+        encrypted: entryData.encrypted || false,
+        hash: entryData.hash || hash,
         index: entryData.index,
         issuer: entryData.issuer,
-        secret: entryData.secret,
+        secret: entryData.secret || "",
         type,
         counter: entryData.counter,
         period,

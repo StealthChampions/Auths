@@ -73,25 +73,6 @@ const ServiceIcon = ({ issuer, account, icon }: { issuer: string; account: strin
   return <div className="service-icon-placeholder">{initial}</div>;
 };
 
-// Use OTPEntryInterface from global declarations
-declare global {
-  interface OTPEntryInterface {
-    hash: string;
-    issuer: string;
-    account: string;
-    code: string;
-    period: number;
-    pinned: boolean;
-    type: number;
-    counter: number;
-    digits: number;
-    secret: string | null;
-    algorithm: number;
-    icon?: string;
-    folder?: string;
-  }
-}
-
 interface EntryComponentProps {
   entry: OTPEntryInterface;
   filtered?: boolean;

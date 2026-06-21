@@ -25,6 +25,7 @@ export default defineContentScript({
           .catch((error) => sendResponse({ error: error.message }));
         return true; // Will respond asynchronously
       }
+      return false;
     });
 
     function startRegionSelection(): Promise<{ success: boolean; error?: string }> {

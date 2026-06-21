@@ -9,6 +9,9 @@
  */
 
 import { parseSiteName, countMatchedEntries } from '@/utils/site-match';
+import { dedupeAccountsBySecret, generateEntryHash, hasDuplicateSecret } from '@/utils/accounts';
+import { decryptWebDAVPassword, migratePlainWebDAVConfig } from '@/utils/webdav-credentials';
+import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, uploadWebDAVBackup } from '@/utils/webdav-sync';
 
 export default defineBackground(() => {
   // Localized messages for toast notifications
@@ -71,9 +74,10 @@ export default defineBackground(() => {
       try {
         // Get WebDAV config | 获取 WebDAV 配置
         const configResult = await chrome.storage.local.get(['webdavConfig']);
-        const config = configResult.webdavConfig;
+        const config = await migratePlainWebDAVConfig(configResult.webdavConfig);
+        const password = await decryptWebDAVPassword(config);
 
-        if (!config || !config.serverUrl || !config.username || !config.password) {
+        if (!config || !config.serverUrl || !config.username || !password) {
           console.log('[Auths Background] WebDAV not configured, skipping auto backup');
           return;
         }
@@ -88,48 +92,9 @@ export default defineBackground(() => {
         }
 
         // Get remote latest backup timestamp | 获取远程最新备份时间戳
-        const propfindResponse = await fetch(config.serverUrl, {
-          method: 'PROPFIND',
-          headers: {
-            'Authorization': 'Basic ' + btoa(`${config.username}:${config.password}`),
-            'Depth': '1',
-            'Content-Type': 'application/xml'
-          },
-          body: `<?xml version="1.0" encoding="utf-8" ?>
-            <D:propfind xmlns:D="DAV:">
-              <D:prop><D:displayname/><D:getlastmodified/></D:prop>
-            </D:propfind>`
-        });
-
-        let remoteTimestamp = 0;
-        let remoteFilename = '';
-        if (propfindResponse.ok) {
-          const text = await propfindResponse.text();
-
-          // Parse XML using regex (DOMParser not available in Service Worker)
-          // 使用正则解析 XML（Service Worker 中无 DOMParser）
-          const responseRegex = /<D:response[^>]*>([\s\S]*?)<\/D:response>/gi;
-          const hrefRegex = /<D:href[^>]*>([^<]*)<\/D:href>/i;
-          const lastModRegex = /<D:getlastmodified[^>]*>([^<]*)<\/D:getlastmodified>/i;
-
-          let match;
-          while ((match = responseRegex.exec(text)) !== null) {
-            const responseBlock = match[1];
-            const hrefMatch = hrefRegex.exec(responseBlock);
-            const lastModMatch = lastModRegex.exec(responseBlock);
-
-            const href = hrefMatch ? hrefMatch[1] : '';
-            const lastMod = lastModMatch ? lastModMatch[1] : '';
-
-            if (href.includes('auths-backup') && href.endsWith('.json')) {
-              const ts = lastMod ? new Date(lastMod).getTime() : 0;
-              if (ts > remoteTimestamp) {
-                remoteTimestamp = ts;
-                remoteFilename = decodeURIComponent(href.split('/').pop() || '');
-              }
-            }
-          }
-        }
+        const latestRemote = await getLatestWebDAVBackup(config.serverUrl, config.username, password);
+        const remoteTimestamp = latestRemote?.timestamp || 0;
+        const remoteFilename = latestRemote?.name || '';
 
         // Log helper | 日志辅助函数
         const addLog = async (level: string, operation: string, message: string, details: string) => {
@@ -147,60 +112,24 @@ export default defineBackground(() => {
           console.log('[Auths Background] Remote is newer, downloading...');
           await addLog('INFO', 'AUTO_BACKUP_TRIGGER', '检测到远程更新，正在下载', remoteFilename);
 
-          const downloadUrl = config.serverUrl.endsWith('/')
-            ? `${config.serverUrl}${remoteFilename}`
-            : `${config.serverUrl}/${remoteFilename}`;
-          const downloadResp = await fetch(downloadUrl, {
-            method: 'GET',
-            headers: { 'Authorization': 'Basic ' + btoa(`${config.username}:${config.password}`) }
-          });
+          const backupData = await downloadWebDAVBackup(config.serverUrl, config.username, password, remoteFilename);
+          const allAccounts = [...entries, ...backupData.accounts];
+          const {
+            accounts: deduplicatedAccounts,
+            removedDuplicates,
+          } = dedupeAccountsBySecret(allAccounts, { duplicatePreference: 'last' });
 
-          if (downloadResp.ok) {
-            const backupData = await downloadResp.json();
-            if (backupData.accounts && Array.isArray(backupData.accounts)) {
-              // First merge all accounts | 先合并所有账户
-              const allAccounts = [...entries, ...backupData.accounts];
+          const importCount = deduplicatedAccounts.length - entries.length;
 
-              // Then deduplicate | 然后去重
-              const normalizeSecret = (s: string) => s ? s.toUpperCase().replace(/\s/g, '') : '';
-              const seenSecrets = new Set<string>();
-              const seenHashes = new Set<string>();
-              const generateHash = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
-
-              const deduplicatedAccounts = allAccounts.filter((acc: any) => {
-                const normalizedSecret = normalizeSecret(acc.secret);
-                if (normalizedSecret && seenSecrets.has(normalizedSecret)) return false;
-                if (!acc.hash || seenHashes.has(acc.hash)) {
-                  acc.hash = generateHash();
-                }
-                if (normalizedSecret) seenSecrets.add(normalizedSecret);
-                seenHashes.add(acc.hash);
-                return true;
-              });
-
-              const importCount = deduplicatedAccounts.length - entries.length;
-              const removedDuplicates = allAccounts.length - deduplicatedAccounts.length;
-
-              await chrome.storage.local.set({ entries: deduplicatedAccounts, entriesLastModified: Date.now(), lastSyncedTimestamp: Date.now() });
-              await addLog('INFO', 'BACKUP_SUCCESS', '自动同步成功（下载）', `新增 ${importCount} 个账户, 去重 ${removedDuplicates} 个`);
-            }
-          } else {
-            await addLog('ERROR', 'BACKUP_FAILED', '下载失败', `HTTP ${downloadResp.status}`);
-          }
+          await chrome.storage.local.set({ entries: deduplicatedAccounts, entriesLastModified: Date.now(), lastSyncedTimestamp: Date.now() });
+          await addLog('INFO', 'BACKUP_SUCCESS', '自动同步成功（下载）', `新增 ${importCount} 个账户, 去重 ${removedDuplicates} 个`);
         } else if (localTimestamp > remoteTimestamp) {
           // Local is newer, upload | 本地更新，上传
           console.log('[Auths Background] Local is newer, uploading...');
           await addLog('INFO', 'AUTO_BACKUP_TRIGGER', '本地更新，正在上传', config.serverUrl);
 
           // Deduplicate before upload | 上传前去重
-          const normalizeSecret = (s: string) => s ? s.toUpperCase().replace(/\s/g, '') : '';
-          const seenSecrets = new Set<string>();
-          const deduplicatedEntries = entries.filter((acc: any) => {
-            const normalized = normalizeSecret(acc.secret);
-            if (normalized && seenSecrets.has(normalized)) return false;
-            if (normalized) seenSecrets.add(normalized);
-            return true;
-          });
+          const { accounts: deduplicatedEntries } = dedupeAccountsBySecret(entries);
 
           // Update local if duplicates were removed | 如果有重复被移除则更新本地
           if (deduplicatedEntries.length < entries.length) {
@@ -208,30 +137,29 @@ export default defineBackground(() => {
             await addLog('INFO', 'AUTO_BACKUP_TRIGGER', '上传前去重', `移除 ${entries.length - deduplicatedEntries.length} 个重复账户`);
           }
 
-          const backupData = { version: '1.0', timestamp: Date.now(), accounts: deduplicatedEntries };
-          const filename = `auths-backup-${new Date().toISOString().slice(0, 10)}.json`;
-          const uploadUrl = config.serverUrl.endsWith('/') ? `${config.serverUrl}${filename}` : `${config.serverUrl}/${filename}`;
+          const filename = await uploadWebDAVBackup(config.serverUrl, config.username, password, deduplicatedEntries);
+          await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
+          await addLog('INFO', 'BACKUP_SUCCESS', '自动备份成功（上传）', `文件: ${filename}`);
 
-          const response = await fetch(uploadUrl, {
-            method: 'PUT',
-            headers: {
-              'Authorization': 'Basic ' + btoa(`${config.username}:${config.password}`),
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(backupData, null, 2)
-          });
-
-          if (response.ok || response.status === 201 || response.status === 204) {
-            await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
-            await addLog('INFO', 'BACKUP_SUCCESS', '自动备份成功（上传）', `文件: ${filename}`);
-          } else {
-            await addLog('ERROR', 'BACKUP_FAILED', '上传失败', `HTTP ${response.status}`);
-          }
         } else {
           // Already up to date | 已是最新
           console.log('[Auths Background] Already up to date');
           await addLog('INFO', 'AUTO_BACKUP_TRIGGER', '自动备份跳过（已是最新）', '本地和远程数据一致');
           await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
+        }
+
+        try {
+          const cleanup = await cleanupExpiredWebDAVBackups(config.serverUrl, config.username, password, Number(config.retentionDays ?? 30));
+          if (!cleanup.skipped && (cleanup.deleted.length > 0 || cleanup.failed.length > 0)) {
+            await addLog(
+              cleanup.failed.length > 0 ? 'WARN' : 'INFO',
+              'BACKUP_SUCCESS',
+              '备份保留策略已执行',
+              `删除 ${cleanup.deleted.length} 个过期备份, 失败 ${cleanup.failed.length} 个`
+            );
+          }
+        } catch (cleanupError) {
+          await addLog('WARN', 'BACKUP_SUCCESS', '备份成功，但保留策略执行失败', cleanupError instanceof Error ? cleanupError.message : '未知错误');
         }
 
         console.log('[Auths Background] Auto sync completed');
@@ -460,17 +388,11 @@ export default defineBackground(() => {
     };
   }
 
-  // Generate unique hash
-  // 生成唯一哈希值
-  function generateHash(): string {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2);
-  }
-
   // Handle messages from content scripts and popup
   // 处理来自 content script 和 popup 的消息
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.action === 'captureVisibleTab') {
-      chrome.tabs.captureVisibleTab(undefined, { format: 'png' })
+      chrome.tabs.captureVisibleTab(chrome.windows.WINDOW_ID_CURRENT, { format: 'png' })
         .then((dataUrl) => {
           sendResponse({ dataUrl });
         })
@@ -503,7 +425,7 @@ export default defineBackground(() => {
           // 添加哈希值和其他字段
           const newEntry = {
             ...accountData,
-            hash: generateHash(),
+            hash: generateEntryHash(),
             pinned: false,
             code: '',
           };
@@ -515,11 +437,7 @@ export default defineBackground(() => {
 
           // Check for duplicate account (by secret only, consistent with all other dedup paths)
           // 仅基于 secret 检查重复（与所有其他去重逻辑保持一致）
-          const normalizedSecret = accountData.secret.toUpperCase().replace(/\s/g, '');
-          const isDuplicate = entries.some((entry: any) => {
-            const entrySecret = (entry.secret || '').toUpperCase().replace(/\s/g, '');
-            return entrySecret === normalizedSecret;
-          });
+          const isDuplicate = hasDuplicateSecret(entries, accountData.secret);
 
           if (isDuplicate) {
             console.log('[Auths Background] Duplicate account detected');
@@ -559,6 +477,7 @@ export default defineBackground(() => {
       })();
       return true;
     }
+
+    return false;
   });
 });
-

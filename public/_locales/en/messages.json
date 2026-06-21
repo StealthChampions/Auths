@@ -342,40 +342,8 @@
         "message": "Dark",
         "description": "Dark theme"
     },
-    "theme_simple": {
-        "message": "Simple",
-        "description": "Simple theme"
-    },
-    "theme_compact": {
-        "message": "Compact View",
-        "description": "Compact theme"
-    },
-    "theme_high_contrast": {
-        "message": "High Contrast",
-        "description": "High Contrast theme"
-    },
-    "theme_flat": {
-        "message": "Flat",
-        "description": "Flat theme"
-    },
-    "theme_violet": {
-        "message": "Violet",
-        "description": "Violet theme"
-    },
-    "theme_emerald": {
-        "message": "Emerald",
-        "description": "Emerald theme"
-    },
-    "theme_sunset": {
-        "message": "Sunset",
-        "description": "Sunset theme"
-    },
-    "theme_ocean": {
-        "message": "Ocean",
-        "description": "Ocean theme"
-    },
     "theme_description": {
-        "message": "Select appearance theme",
+        "message": "Choose light, dark, or follow system appearance",
         "description": "Theme description"
     },
     "storage_sync_info": {
@@ -1078,6 +1046,14 @@
     "retain_forever": {
         "message": "Keep forever",
         "description": "Retain forever."
+    },
+    "retention_cleanup_done": {
+        "message": "Backup retention policy applied",
+        "description": "Retention cleanup completed."
+    },
+    "retention_cleanup_failed": {
+        "message": "Backup succeeded, but retention cleanup failed",
+        "description": "Retention cleanup failed."
     },
     "btn_save_config": {
         "message": "Save Config",

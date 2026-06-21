@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import { useAccounts, useNotification } from '@/store';
 import { useI18n } from '@/i18n';
+import { hasDuplicateSecret } from '@/utils/accounts';
 
 // SVG Icons | SVG 图标
 const CloseIcon = () => (
@@ -53,12 +54,8 @@ export default function AddAccountForm({ onClose }: AddAccountFormProps) {
       return;
     }
 
-    // Check for duplicate account (same issuer and secret)
-    const normalizedSecret = secret.trim().toUpperCase().replace(/\s/g, '');
-    const isDuplicate = entries?.some((entry: any) => {
-      const entrySecret = (entry.secret || '').toUpperCase().replace(/\s/g, '');
-      return entry.issuer === issuer.trim() && entrySecret === normalizedSecret;
-    });
+    // Check for duplicate account by secret, consistent with QR/import/sync paths.
+    const isDuplicate = hasDuplicateSecret(entries, secret);
 
     if (isDuplicate) {
       notificationDispatch({ type: 'error', payload: t('account_already_exists') });

@@ -3,7 +3,7 @@
 [简体中文](./README_zh.md)
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.0.0-green.svg)](package.json)
+[![Version](https://img.shields.io/badge/Version-1.0.4-green.svg)](package.json)
 [![Build](https://img.shields.io/badge/Build-WXT-orange.svg)](https://wxt.dev)
 
 **Auths** is a secure and modern 2-Step Verification (2FA / TOTP) browser extension. Built with React and the WXT framework, it provides a clean interface and robust security to manage your authentication codes.

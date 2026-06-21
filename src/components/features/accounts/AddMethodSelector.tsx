@@ -9,6 +9,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import jsQR from 'jsqr';
 import { useAccounts, useNotification } from '@/store';
 import { useI18n } from '@/i18n';
+import { hasDuplicateSecret } from '@/utils/accounts';
 
 // SVG Icons | SVG 图标
 const CloseIcon = () => (
@@ -163,13 +164,9 @@ export default function AddMethodSelector({ onClose, onSuccess, onManualEntry }:
       const accountData = parseOtpAuthUrl(qrData);
       console.log('[Auths] Parsed account data:', accountData);
 
-      // Check for duplicate account (by secret only, consistent with all other dedup paths)
-      // 仅基于 secret 检查重复（与所有其他去重逻辑保持一致）
-      const normalizedSecret = accountData.secret.trim().toUpperCase().replace(/\s/g, '');
-      const isDuplicate = entries?.some((entry: any) => {
-        const entrySecret = (entry.secret || '').toUpperCase().replace(/\s/g, '');
-        return entrySecret === normalizedSecret;
-      });
+      // Check for duplicate account by secret, consistent with import/sync paths.
+      // 仅基于 secret 检查重复（与导入/同步逻辑保持一致）
+      const isDuplicate = hasDuplicateSecret(entries, accountData.secret);
 
       if (isDuplicate) {
         showError(t('account_already_exists'));

@@ -13,6 +13,7 @@ import { useMenu, useNotification, useAccounts } from '@/store';
 import { syncTimeWithGoogle } from '@/models/syncTime';
 import { useI18n } from '@/i18n';
 import { UserSettings } from '@/models/settings';
+import { applyThemePreference, normalizeThemePreference, type ThemePreference } from '@/utils/theme';
 import ImportExport from './ImportExport';
 import WebDAV from './WebDAV';
 import '@/assets/styles/components.css';
@@ -111,9 +112,9 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
 
 
 
-  const handleThemeChange = (theme: string) => {
+  const handleThemeChange = (theme: ThemePreference) => {
     dispatch({ type: 'setTheme', payload: theme });
-    document.documentElement.setAttribute('data-theme', theme);
+    applyThemePreference(theme);
     UserSettings.items.theme = theme;
     UserSettings.commitItems();
   };
@@ -206,15 +207,12 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
               <div className="setting-item">
                 <label>{t('theme')}</label>
                 <select
-                  value={menu.theme || 'light'}
-                  onChange={(e) => handleThemeChange(e.target.value)}
+                  value={normalizeThemePreference(menu.theme)}
+                  onChange={(e) => handleThemeChange(normalizeThemePreference(e.target.value))}
                 >
                   <option value="light">{t('theme_light')}</option>
                   <option value="dark">{t('theme_dark')}</option>
-                  <option value="violet">{t('theme_violet')}</option>
-                  <option value="emerald">{t('theme_emerald')}</option>
-                  <option value="sunset">{t('theme_sunset')}</option>
-                  <option value="ocean">{t('theme_ocean')}</option>
+                  <option value="system">{t('follow_system')}</option>
                 </select>
                 <p className="setting-description">
                   {t('theme_description')}
