@@ -8,14 +8,15 @@
  * 处理账户过滤、排序和基于当前网站的智能过滤。
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { Suspense, useState, useRef, useEffect } from 'react';
 import { useAccounts, useStyle, useNotification, useMenu } from '@/store';
 import { getSiteName, getMatchedEntriesHash } from '@/utils';
 import { useI18n } from '@/i18n';
 import EntryComponent from '@/components/features/accounts/EntryComponent';
-import AddAccountForm from '@/components/features/accounts/AddAccountForm';
-import AddMethodSelector from '@/components/features/accounts/AddMethodSelector';
-import EditAccountModal from '@/components/features/accounts/EditAccountModal';
+
+const AddAccountForm = React.lazy(() => import('@/components/features/accounts/AddAccountForm'));
+const AddMethodSelector = React.lazy(() => import('@/components/features/accounts/AddMethodSelector'));
+const EditAccountModal = React.lazy(() => import('@/components/features/accounts/EditAccountModal'));
 
 // SVG Icons | SVG 图标
 const SearchIcon = () => (
@@ -107,6 +108,7 @@ export default function MainBody() {
   });
 
   const folders = Array.from(new Set(entries?.map((e: OTPEntryInterface) => e.folder).filter(Boolean))) as string[];
+  const hasFolderFilters = folders.length > 0;
 
   const handleClearFilter = () => {
     dispatch({ type: 'stopFilter' });
@@ -239,6 +241,7 @@ export default function MainBody() {
           />
           {searchText && (
             <button
+              type="button"
               className="clear-search"
               onClick={() => setSearchText('')}
               title={t('clear')}
@@ -251,12 +254,13 @@ export default function MainBody() {
       </div>
 
       {/* Folder Tabs */}
-      {entries && entries.length > 0 && (
+      {entries && entries.length > 0 && hasFolderFilters && (
         <div className="folder-tabs-container">
           <div className="folder-tabs">
 
             {folders.map(folder => (
               <button
+                type="button"
                 key={folder}
                 className={`folder-tab ${selectedFolder === folder ? 'active' : ''}`}
                 onClick={() => setSelectedFolder(folder)}
@@ -266,6 +270,7 @@ export default function MainBody() {
             ))}
             {entries.some((e: OTPEntryInterface) => !e.folder) && folders.length > 0 && (
               <button
+                type="button"
                 className={`folder-tab ${selectedFolder === 'uncategorized' ? 'active' : ''}`}
                 onClick={() => setSelectedFolder('uncategorized')}
               >
@@ -327,6 +332,7 @@ export default function MainBody() {
       {/* Add Account FAB */}
       {!style.isEditing && (
         <button
+          type="button"
           className="add-account-fab"
           onClick={() => setShowMethodSelector(true)}
           title={t('add_account')}
@@ -340,14 +346,16 @@ export default function MainBody() {
       {showMethodSelector && (
         <div className="modal-overlay" onClick={() => setShowMethodSelector(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <AddMethodSelector
-              onClose={() => setShowMethodSelector(false)}
-              onSuccess={handleAddAccountSuccess}
-              onManualEntry={() => {
-                setShowMethodSelector(false);
-                setShowAddForm(true);
-              }}
-            />
+            <Suspense fallback={null}>
+              <AddMethodSelector
+                onClose={() => setShowMethodSelector(false)}
+                onSuccess={handleAddAccountSuccess}
+                onManualEntry={() => {
+                  setShowMethodSelector(false);
+                  setShowAddForm(true);
+                }}
+              />
+            </Suspense>
           </div>
         </div>
       )}
@@ -356,9 +364,11 @@ export default function MainBody() {
       {showAddForm && (
         <div className="modal-overlay" onClick={() => setShowAddForm(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <AddAccountForm
-              onClose={() => setShowAddForm(false)}
-            />
+            <Suspense fallback={null}>
+              <AddAccountForm
+                onClose={() => setShowAddForm(false)}
+              />
+            </Suspense>
           </div>
         </div>
       )}
@@ -369,11 +379,13 @@ export default function MainBody() {
       {showEditModal && editingEntry && (
         <div className="modal-overlay" onClick={handleEditClose}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <EditAccountModal
-              entry={editingEntry}
-              onClose={handleEditClose}
-              onSave={handleEditSave}
-            />
+            <Suspense fallback={null}>
+              <EditAccountModal
+                entry={editingEntry}
+                onClose={handleEditClose}
+                onSave={handleEditSave}
+              />
+            </Suspense>
           </div>
         </div>
       )}

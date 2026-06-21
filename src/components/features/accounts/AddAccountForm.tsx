@@ -125,7 +125,7 @@ export default function AddAccountForm({ onClose }: AddAccountFormProps) {
             onChange={(e) => setSecret(e.target.value.toUpperCase())}
             placeholder={t('secret_key_placeholder')}
             required
-            style={{ fontFamily: 'var(--font-mono)', letterSpacing: '1px' }}
+            className="secret-input"
           />
         </div>
 
@@ -135,19 +135,9 @@ export default function AddAccountForm({ onClose }: AddAccountFormProps) {
             type="button"
             className="advanced-toggle"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--color-text-secondary)',
-              cursor: 'pointer',
-              fontSize: '13px',
-              padding: '8px 0',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
+            aria-expanded={showAdvanced}
           >
-            <span style={{ transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>▶</span>
+            <span className="advanced-toggle-icon" aria-hidden="true">▶</span>
             {t('advanced_options')}
           </button>
         </div>

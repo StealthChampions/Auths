@@ -5,6 +5,8 @@
  * 记录 WebDAV 备份和恢复操作的详细日志，便于调试和监控同步状态。
  */
 
+import { debugError, debugLog, debugWarn } from '@/utils/logger';
+
 // Log levels | 日志级别
 export type LogLevel = 'INFO' | 'WARN' | 'ERROR';
 
@@ -151,14 +153,14 @@ export async function addSyncLog(
             ...localization
         };
 
-        // Output to console as well |同时输出到控制台
+        // Output to the console only during development | 仅在开发环境输出到控制台
         const logPrefix = `[Auths WebDAV] [${level}] [${operation}]`;
         if (level === 'ERROR') {
-            console.error(logPrefix, message, details || '');
+            debugError(logPrefix, message, details || '');
         } else if (level === 'WARN') {
-            console.warn(logPrefix, message, details || '');
+            debugWarn(logPrefix, message, details || '');
         } else {
-            console.log(logPrefix, message, details || '');
+            debugLog(logPrefix, message, details || '');
         }
 
         // Get existing logs | 获取现有日志
@@ -176,7 +178,7 @@ export async function addSyncLog(
         // Save logs | 保存日志
         await chrome.storage.local.set({ [STORAGE_KEY]: logs });
     } catch (error) {
-        console.error('[Auths WebDAV] Failed to save log:', error);
+        debugError('[Auths WebDAV] Failed to save log:', error);
     }
 }
 
@@ -225,7 +227,7 @@ export async function getSyncLogs(): Promise<SyncLogEntry[]> {
         // Return reverse (newest first) | 返回倒序（最新在前）
         return logs.reverse();
     } catch (error) {
-        console.error('[Auths WebDAV] Failed to get logs:', error);
+        debugError('[Auths WebDAV] Failed to get logs:', error);
         return [];
     }
 }
@@ -236,9 +238,9 @@ export async function getSyncLogs(): Promise<SyncLogEntry[]> {
 export async function clearSyncLogs(): Promise<void> {
     try {
         await chrome.storage.local.remove(STORAGE_KEY);
-        console.log('[Auths WebDAV] Logs cleared');
+        debugLog('[Auths WebDAV] Logs cleared');
     } catch (error) {
-        console.error('[Auths WebDAV] Failed to clear logs:', error);
+        debugError('[Auths WebDAV] Failed to clear logs:', error);
     }
 }
 

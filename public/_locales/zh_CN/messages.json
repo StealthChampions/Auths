@@ -96,6 +96,9 @@
   "sync_time": {
     "message": "校准时间"
   },
+  "sync_now": {
+    "message": "校准"
+  },
   "sync_time_desc": {
     "message": "与 Google 服务器校准时间误差"
   },
@@ -282,10 +285,6 @@
     "message": "显示全部条目",
     "description": "Show all entries."
   },
-  "dropbox_risk": {
-    "message": "警告：备份未加密，您需自担风险。",
-    "description": "Backup risk warning."
-  },
   "import_error_password": {
     "message": "您必须提供正确的密码才能导入备份。",
     "description": "Error password warning when import backups."
@@ -318,10 +317,6 @@
     "message": "编辑",
     "description": "Edit"
   },
-  "manual_dropbox": {
-    "message": "手动备份",
-    "description": "Manual backup"
-  },
   "use_autofill": {
     "message": "启用自动填充",
     "description": "Use Autofill"
@@ -353,31 +348,6 @@
   "browser_sync": {
     "message": "浏览器数据同步",
     "description": "Storage location"
-  },
-  "sign_in": {
-    "message": "登录",
-    "description": "Sign in to 3rd party storage services"
-  },
-  "sign_in_business": {
-    "message": "登录 (企业版)",
-    "description": "Sign in to 3rd party storage services"
-  },
-  "onedrive_business_perms": {
-    "message": "为何企业版账户需要更高权限？"
-  },
-  "log_out": {
-    "message": "注销",
-    "description": "Sign out of 3rd party storage services"
-  },
-  "token_revoked": {
-    "message": "连接到您的 $SERVICE$ 账号时出错，请重试。",
-    "description": "Error authenticating to backup service. $SERVICE$ will be replaced with a proper noun (E.g.: 'Google Drive' or 'Dropbox')",
-    "placeholders": {
-      "service": {
-        "content": "$1",
-        "example": "Google Drive"
-      }
-    }
   },
   "otp_unsupported_warn": {
     "message": "您添加了Steam或战网账号，所以备份文件将不会使用标准输出格式。",
@@ -511,24 +481,6 @@
   "permission_sync_clock": {
     "message": "允许从 Google 同步时间"
   },
-  "permission_dropbox": {
-    "message": "允许备份到 Dropbox"
-  },
-  "permission_dropbox_cannot_revoke": {
-    "message": "您必须先停用 Dropbox 备份。"
-  },
-  "permission_drive": {
-    "message": "允许备份到 Google Drive。"
-  },
-  "permission_drive_cannot_revoke": {
-    "message": "您必须先停用 Google Drive 备份。"
-  },
-  "permission_onedrive": {
-    "message": "允许备份到 OneDrive。"
-  },
-  "permission_onedrive_cannot_revoke": {
-    "message": "您必须先停用 OneDrive 备份。"
-  },
   "permission_unknown_permission": {
     "message": "未知权限。如果您看到此消息，请发送错误报告。"
   },
@@ -552,9 +504,6 @@
   },
   "theme_default": {
     "message": "默认"
-  },
-  "zoom": {
-    "message": "缩放"
   },
   "features": {
     "message": "功能"
@@ -618,6 +567,9 @@
   },
   "clear_all_data_confirm": {
     "message": "确定要删除所有数据吗？此操作无法撤销。"
+  },
+  "danger_zone": {
+    "message": "危险操作"
   },
   "all_data_cleared": {
     "message": "所有数据已清除。"
@@ -897,8 +849,11 @@
   "save": {
     "message": "保存"
   },
-  "zoom_description": {
-    "message": "调整界面缩放比例"
+  "open": {
+    "message": "打开"
+  },
+  "configure": {
+    "message": "配置"
   },
   "webdav_description": {
     "message": "自定义服务器备份"
@@ -983,6 +938,42 @@
     "message": "连接到自建服务器进行备份（支持 Nextcloud、坚果云等）",
     "description": "WebDAV description."
   },
+  "webdav_connection": {
+    "message": "连接配置"
+  },
+  "device_name": {
+    "message": "设备名称",
+    "description": "Label for local WebDAV backup device name."
+  },
+  "device_name_placeholder": {
+    "message": "例如：公司电脑 Chrome",
+    "description": "Placeholder for WebDAV backup device name."
+  },
+  "device_name_hint": {
+    "message": "用于在 WebDAV 备份文件名中识别这个浏览器配置，不包含浏览器登录账号。",
+    "description": "Hint for WebDAV backup device name."
+  },
+  "legacy_backup": {
+    "message": "旧格式备份",
+    "description": "Label for old WebDAV backup files without device metadata."
+  },
+  "unknown_device": {
+    "message": "未知",
+    "description": "Fallback label for unknown backup device."
+  },
+  "device_id_label": {
+    "message": "设备 $1",
+    "description": "Fallback label for a backup device shown by id."
+  },
+  "webdav_automation": {
+    "message": "自动化策略"
+  },
+  "webdav_manual_actions": {
+    "message": "手动操作"
+  },
+  "webdav_logs_help": {
+    "message": "日志与帮助"
+  },
   "server_url": {
     "message": "服务器地址",
     "description": "Server URL label."
@@ -1036,19 +1027,19 @@
     "description": "Retention policy label."
   },
   "retain_7d": {
-    "message": "保留最近 7 天",
+    "message": "7 天",
     "description": "Retain 7 days."
   },
   "retain_30d": {
-    "message": "保留最近 30 天",
+    "message": "30 天",
     "description": "Retain 30 days."
   },
   "retain_90d": {
-    "message": "保留最近 90 天",
+    "message": "90 天",
     "description": "Retain 90 days."
   },
   "retain_1y": {
-    "message": "保留最近 1 年",
+    "message": "1 年",
     "description": "Retain 1 year."
   },
   "retain_forever": {

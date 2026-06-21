@@ -4,12 +4,15 @@ export interface WebDAVBackupFile {
   name: string;
   timestamp: number;
   deviceId?: string;
+  deviceName?: string;
   legacy: boolean;
 }
 
 export interface WebDAVBackupData<T = unknown> {
   version: string;
   timestamp: number;
+  deviceId?: string;
+  deviceName?: string;
   accounts: T[];
 }
 
@@ -24,14 +27,17 @@ export function getWebDAVAuthHeader(username: string, password: string): string 
 }
 
 export function getWebDAVFileUrl(serverUrl: string, filename: string): string {
-  return serverUrl.endsWith('/') ? `${serverUrl}${filename}` : `${serverUrl}/${filename}`;
+  const encodedFilename = encodeURIComponent(filename);
+  return serverUrl.endsWith('/') ? `${serverUrl}${encodedFilename}` : `${serverUrl}/${encodedFilename}`;
 }
 
 const WEBDAV_DEVICE_ID_KEY = 'webdavDeviceId';
+const WEBDAV_DEVICE_NAME_KEY = 'webdavDeviceName';
 const BACKUP_FILENAME_PREFIX = 'auths-backup';
 const DEVICE_ID_LENGTH = 12;
 const LEGACY_BACKUP_FILENAME_REGEX = /^auths-backup-\d{4}-\d{2}-\d{2}\.json$/;
 const DEVICE_BACKUP_FILENAME_REGEX = /^auths-backup-([a-z0-9]{12})-\d{4}-\d{2}-\d{2}\.json$/;
+const NAMED_DEVICE_BACKUP_FILENAME_REGEX = /^auths-backup-([a-z0-9]{12})-(.+)-\d{4}-\d{2}-\d{2}\.json$/;
 
 function generateWebDAVDeviceId(): string {
   const randomBytes = new Uint8Array(DEVICE_ID_LENGTH);
@@ -52,11 +58,72 @@ export async function getWebDAVDeviceId(): Promise<string> {
   return deviceId;
 }
 
-export function getBackupFilename(deviceId: string, date = new Date()): string {
+function getBrowserName(): string {
+  const userAgent = navigator.userAgent;
+  if (/Edg\//.test(userAgent)) return 'Edge';
+  if (/Firefox\//.test(userAgent)) return 'Firefox';
+  if (/OPR\//.test(userAgent)) return 'Opera';
+  if (/Chrome\//.test(userAgent) || /Chromium\//.test(userAgent)) return 'Chrome';
+  if (/Safari\//.test(userAgent)) return 'Safari';
+  return 'Browser';
+}
+
+function getOSName(): string {
+  const userAgent = navigator.userAgent;
+  if (/Windows/i.test(userAgent)) return 'Windows';
+  if (/Macintosh|Mac OS X/i.test(userAgent)) return 'macOS';
+  if (/Android/i.test(userAgent)) return 'Android';
+  if (/iPhone|iPad|iPod/i.test(userAgent)) return 'iOS';
+  if (/Linux/i.test(userAgent)) return 'Linux';
+  return 'Device';
+}
+
+function getDefaultDeviceName(): string {
+  return `${getBrowserName()} on ${getOSName()}`;
+}
+
+export function normalizeWebDAVDeviceName(deviceName: string): string {
+  const normalized = deviceName.trim().replace(/\s+/g, ' ');
+  return normalized.slice(0, 60);
+}
+
+export function getDeviceNameSlug(deviceName: string): string {
+  const slug = normalizeWebDAVDeviceName(deviceName)
+    .toLowerCase()
+    .replace(/[^\p{Letter}\p{Number}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  return slug || 'device';
+}
+
+export async function getWebDAVDeviceName(): Promise<string> {
+  const result = await chrome.storage.local.get([WEBDAV_DEVICE_NAME_KEY]);
+  const existingDeviceName = result[WEBDAV_DEVICE_NAME_KEY];
+
+  if (typeof existingDeviceName === 'string' && normalizeWebDAVDeviceName(existingDeviceName)) {
+    return normalizeWebDAVDeviceName(existingDeviceName);
+  }
+
+  const deviceName = getDefaultDeviceName();
+  await chrome.storage.local.set({ [WEBDAV_DEVICE_NAME_KEY]: deviceName });
+  return deviceName;
+}
+
+export async function setWebDAVDeviceName(deviceName: string): Promise<string> {
+  const normalizedDeviceName = normalizeWebDAVDeviceName(deviceName) || getDefaultDeviceName();
+  await chrome.storage.local.set({ [WEBDAV_DEVICE_NAME_KEY]: normalizedDeviceName });
+  return normalizedDeviceName;
+}
+
+export function getBackupFilename(deviceId: string, date = new Date(), deviceName?: string): string {
+  if (deviceName) {
+    return `${BACKUP_FILENAME_PREFIX}-${deviceId}-${getDeviceNameSlug(deviceName)}-${formatLocalDate(date)}.json`;
+  }
+
   return `${BACKUP_FILENAME_PREFIX}-${deviceId}-${formatLocalDate(date)}.json`;
 }
 
-export function parseWebDAVBackupFilename(filename: string): Pick<WebDAVBackupFile, 'deviceId' | 'legacy'> | null {
+export function parseWebDAVBackupFilename(filename: string): Pick<WebDAVBackupFile, 'deviceId' | 'deviceName' | 'legacy'> | null {
   if (LEGACY_BACKUP_FILENAME_REGEX.test(filename)) {
     return { legacy: true };
   }
@@ -64,6 +131,15 @@ export function parseWebDAVBackupFilename(filename: string): Pick<WebDAVBackupFi
   const deviceMatch = DEVICE_BACKUP_FILENAME_REGEX.exec(filename);
   if (deviceMatch) {
     return { deviceId: deviceMatch[1], legacy: false };
+  }
+
+  const namedDeviceMatch = NAMED_DEVICE_BACKUP_FILENAME_REGEX.exec(filename);
+  if (namedDeviceMatch) {
+    return {
+      deviceId: namedDeviceMatch[1],
+      deviceName: namedDeviceMatch[2],
+      legacy: false,
+    };
   }
 
   return null;
@@ -165,10 +241,14 @@ export async function uploadWebDAVBackup<T>(
   accounts: T[],
   filename?: string
 ): Promise<string> {
-  const targetFilename = filename || getBackupFilename(await getWebDAVDeviceId());
+  const deviceId = await getWebDAVDeviceId();
+  const deviceName = await getWebDAVDeviceName();
+  const targetFilename = filename || getBackupFilename(deviceId, new Date(), deviceName);
   const backupData: WebDAVBackupData<T> = {
     version: '1.0',
     timestamp: Date.now(),
+    deviceId,
+    deviceName,
     accounts,
   };
 

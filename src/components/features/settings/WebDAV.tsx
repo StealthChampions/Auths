@@ -11,12 +11,66 @@ import { useNotification, useAccounts } from '@/store';
 import { addLocalizedSyncLog, getLocalizedSyncLogText, getSyncLogs, clearSyncLogs, formatLogTime, type SyncLogEntry } from '@/utils/sync-logger';
 import { dedupeAccountsBySecret } from '@/utils/accounts';
 import { decryptWebDAVPassword, migratePlainWebDAVConfig, withEncryptedWebDAVPassword } from '@/utils/webdav-credentials';
-import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, listWebDAVBackups, uploadWebDAVBackup } from '@/utils/webdav-sync';
-import '@/assets/styles/components.css';
+import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, getWebDAVDeviceName, listWebDAVBackups, setWebDAVDeviceName, uploadWebDAVBackup } from '@/utils/webdav-sync';
 
 interface WebDAVProps {
     onClose: () => void;
 }
+
+const GlobeIcon = () => (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M3 12h18M12 3c2.4 2.5 3.6 5.5 3.6 9s-1.2 6.5-3.6 9M12 3c-2.4 2.5-3.6 5.5-3.6 9s1.2 6.5 3.6 9" />
+    </svg>
+);
+
+const SaveIcon = () => (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 3h12l2 2v16H5z" />
+        <path d="M8 3v6h8V3M8 21v-7h8v7" />
+    </svg>
+);
+
+const CloudUploadIcon = () => (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M17.5 18H18a4 4 0 0 0 .4-8 6 6 0 0 0-11.3-2A5 5 0 0 0 6 18h.5" />
+        <path d="M12 11v9M8.5 14.5 12 11l3.5 3.5" />
+    </svg>
+);
+
+const DownloadIcon = () => (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3v11M8 10l4 4 4-4" />
+        <path d="M5 17v3h14v-3" />
+    </svg>
+);
+
+const LogsIcon = () => (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M8 6h11M8 12h11M8 18h11" />
+        <path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" />
+    </svg>
+);
+
+const TrashIcon = () => (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15" />
+        <path d="M10 11v6M14 11v6" />
+    </svg>
+);
+
+const SpinnerIcon = () => (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="icon-spin">
+        <path d="M12 3a9 9 0 1 1-8 5" />
+    </svg>
+);
+
+const FieldHint = ({ text }: { text: string }) => (
+    <button type="button" className="webdav-hint" aria-label={text}>
+        ?
+        <span className="webdav-hint-tooltip" role="tooltip">{text}</span>
+    </button>
+);
 
 /**
  * Ensure WebDAV server permission is granted | 确保已获得 WebDAV 服务器访问权限
@@ -52,12 +106,13 @@ export default function WebDAV({ onClose }: WebDAVProps) {
     const [serverUrl, setServerUrl] = useState('');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [deviceName, setDeviceName] = useState('');
     const [loading, setLoading] = useState(false);
     const [autoBackup, setAutoBackup] = useState(false);
     const [backupInterval, setBackupInterval] = useState('1440'); // Default 24 hours | 默认 24 小时
     const [retentionDays, setRetentionDays] = useState(30); // Default 30 days | 默认 30 天
     const [showRestoreList, setShowRestoreList] = useState(false);
-    const [backupFiles, setBackupFiles] = useState<Array<{ name: string, date: string }>>([]);
+    const [backupFiles, setBackupFiles] = useState<Array<{ name: string, date: string, deviceName: string }>>([]);
     const [restoreLoading, setRestoreLoading] = useState(false);
     // Log related state | 日志相关状态
     const [showLogs, setShowLogs] = useState(false);
@@ -102,6 +157,12 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         }
     };
 
+    const persistDeviceName = async () => {
+        const savedDeviceName = await setWebDAVDeviceName(deviceName);
+        setDeviceName(savedDeviceName);
+        return savedDeviceName;
+    };
+
     // List backups from WebDAV server using PROPFIND | 使用 PROPFIND 列出 WebDAV 服务器上的备份
     const listBackups = async () => {
         if (!serverUrl || !username || !password) {
@@ -122,6 +183,9 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             const files = (await listWebDAVBackups(serverUrl, username, password)).sort((a, b) => b.timestamp - a.timestamp).map((file) => ({
                 name: file.name,
                 date: file.timestamp ? new Date(file.timestamp).toLocaleString() : 'Unknown',
+                deviceName: file.legacy
+                    ? t('legacy_backup')
+                    : file.deviceName?.replace(/-/g, ' ') || t('device_id_label', [file.deviceId || t('unknown_device')]),
             }));
 
             setBackupFiles(files);
@@ -157,7 +221,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         });
 
         try {
-            const backupData = await downloadWebDAVBackup(serverUrl, username, password, filename);
+            const backupData = await downloadWebDAVBackup<OTPEntryInterface>(serverUrl, username, password, filename);
 
             // Merge with existing accounts | 与现有账户合并
             const result = await chrome.storage.local.get(['entries']);
@@ -209,6 +273,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
 
         // Validate URL format | 验证 URL 格式
         try {
+            await persistDeviceName();
             new URL(serverUrl);
         } catch {
             showToast('error', t('invalid_server_url'));
@@ -292,9 +357,10 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         });
 
         try {
+            await persistDeviceName();
             // Get entries from storage | 从存储中获取账户数据
             const result = await chrome.storage.local.get(['entries']);
-            let entries = result.entries || [];
+            let entries: OTPEntryInterface[] = result.entries || [];
 
             if (entries.length === 0) {
                 showToast('error', t('no_accounts_backup'));
@@ -360,9 +426,10 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         });
 
         try {
+            await persistDeviceName();
             // 1. Get local data and its timestamp | 获取本地数据及其时间戳
             const localResult = await chrome.storage.local.get(['entries', 'entriesLastModified']);
-            const localEntries = localResult.entries || [];
+            const localEntries: OTPEntryInterface[] = localResult.entries || [];
             const localTimestamp = localResult.entriesLastModified || 0;
 
             // 2. Get remote latest backup file info | 获取远程最新备份文件信息
@@ -413,7 +480,8 @@ export default function WebDAV({ onClose }: WebDAVProps) {
     };
 
     // Helper: perform upload | 辅助函数：执行上传
-    const performUpload = async (entries: any[]) => {
+    const performUpload = async (entries: OTPEntryInterface[]) => {
+        await persistDeviceName();
         await uploadWebDAVBackup(serverUrl, username, password, entries);
         await applyRetentionPolicy();
         // Update local timestamp | 更新本地时间戳
@@ -422,22 +490,17 @@ export default function WebDAV({ onClose }: WebDAVProps) {
 
     // Helper: perform download and merge | 辅助函数：执行下载并合并
     const performDownload = async (filename: string) => {
-        const backupData = await downloadWebDAVBackup(serverUrl, username, password, filename);
+        const backupData = await downloadWebDAVBackup<OTPEntryInterface>(serverUrl, username, password, filename);
 
         // Merge accounts | 合并账户
         const localResult = await chrome.storage.local.get(['entries']);
-        const existingAccounts = localResult.entries || [];
+        const existingAccounts: OTPEntryInterface[] = localResult.entries || [];
 
         // First merge all accounts | 先合并所有账户
         const allAccounts = [...existingAccounts, ...backupData.accounts];
 
         // Then deduplicate | 然后去重
-        const {
-            accounts: deduplicatedAccounts,
-            removedDuplicates,
-        } = dedupeAccountsBySecret(allAccounts, { duplicatePreference: 'last' });
-
-        const importCount = deduplicatedAccounts.length - existingAccounts.length;
+        const { accounts: deduplicatedAccounts } = dedupeAccountsBySecret(allAccounts, { duplicatePreference: 'last' });
 
         await chrome.storage.local.set({
             entries: deduplicatedAccounts,
@@ -451,7 +514,11 @@ export default function WebDAV({ onClose }: WebDAVProps) {
     // Load saved config on mount | 组件挂载时加载已保存的配置
     React.useEffect(() => {
         const loadConfig = async () => {
-            const result = await chrome.storage.local.get(['webdavConfig']);
+            const [result, savedDeviceName] = await Promise.all([
+                chrome.storage.local.get(['webdavConfig']),
+                getWebDAVDeviceName(),
+            ]);
+            setDeviceName(savedDeviceName);
             if (result.webdavConfig) {
                 const config = await migratePlainWebDAVConfig(result.webdavConfig);
                 const decryptedPassword = await decryptWebDAVPassword(config);
@@ -471,304 +538,275 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content webdav-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h2>🌐 {t('webdav_title')}</h2>
-                    <button className="close-btn" onClick={onClose}>×</button>
+                    <h2>
+                        <span className="modal-title-icon"><GlobeIcon /></span>
+                        {t('webdav_title')}
+                    </h2>
+                    <button type="button" className="close-btn" onClick={onClose} title={t('close')} aria-label={t('close')}>×</button>
                 </div>
 
-                <div className="modal-body">
-                    <p className="section-description">
+                <div className="modal-body webdav-body">
+                    <p className="section-description compact-description">
                         {t('webdav_desc')}
                     </p>
 
-                    <div className="form-group">
-                        <label htmlFor="serverUrl">{t('server_url')}</label>
-                        <input
-                            type="url"
-                            id="serverUrl"
-                            value={serverUrl}
-                            onChange={(e) => setServerUrl(e.target.value)}
-                            placeholder="https://example.com/webdav/"
-                        />
-                        <span className="input-hint">{t('server_url_hint')}</span>
-                    </div>
+                    <section className="webdav-section">
+                        <h3>{t('webdav_connection')}</h3>
 
-                    <div className="form-group">
-                        <label htmlFor="username">{t('username')}</label>
-                        <input
-                            type="text"
-                            id="username"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            placeholder={t('username')}
-                        />
-                    </div>
+                        <div className="webdav-connection-grid">
+                            <div className="form-group webdav-field-full">
+                                <span className="webdav-label-row">
+                                    <label htmlFor="deviceName">{t('device_name')}</label>
+                                    <FieldHint text={t('device_name_hint')} />
+                                </span>
+                                <input
+                                    type="text"
+                                    id="deviceName"
+                                    value={deviceName}
+                                    onChange={(e) => setDeviceName(e.target.value)}
+                                    placeholder={t('device_name_placeholder')}
+                                    maxLength={60}
+                                />
+                            </div>
 
-                    <div className="form-group">
-                        <label htmlFor="password">{t('password')}</label>
-                        <input
-                            type="password"
-                            id="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder={t('password')}
-                        />
-                    </div>
-
-                    <div className="toggle-setting" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderTop: '1px solid var(--color-border)', marginTop: '16px' }}>
-                        <span style={{ fontSize: '14px', color: 'var(--color-text-primary)' }}>{t('auto_backup')}</span>
-                        <label className="toggle-switch" style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px' }}>
-                            <input
-                                type="checkbox"
-                                checked={autoBackup}
-                                onChange={(e) => setAutoBackup(e.target.checked)}
-                                style={{ opacity: 0, width: 0, height: 0 }}
-                            />
-                            <span style={{
-                                position: 'absolute',
-                                cursor: 'pointer',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                backgroundColor: autoBackup ? 'var(--color-primary)' : 'var(--color-border)',
-                                transition: '0.3s',
-                                borderRadius: '24px'
-                            }}>
-                                <span style={{
-                                    position: 'absolute',
-                                    content: '""',
-                                    height: '18px',
-                                    width: '18px',
-                                    left: autoBackup ? '23px' : '3px',
-                                    bottom: '3px',
-                                    backgroundColor: 'var(--color-bg-primary)',
-                                    transition: '0.3s',
-                                    borderRadius: '50%',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                                }}></span>
-                            </span>
-                        </label>
-                    </div>
-
-                    {autoBackup && (
-                        <>
-                            <div className="form-group">
-                                <label htmlFor="backupInterval">{t('backup_frequency')}</label>
-                                <select
-                                    id="backupInterval"
-                                    value={backupInterval}
-                                    onChange={(e) => setBackupInterval(e.target.value)}
-                                    className="form-select"
-                                    style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }}
-                                >
-                                    <option value="30">{t('freq_30m')}</option>
-                                    <option value="60">{t('freq_1h')}</option>
-                                    <option value="360">{t('freq_6h')}</option>
-                                    <option value="720">{t('freq_12h')}</option>
-                                    <option value="1440">{t('freq_24h')}</option>
-                                    <option value="10080">{t('freq_week')}</option>
-                                </select>
+                            <div className="form-group webdav-field-full">
+                                <span className="webdav-label-row">
+                                    <label htmlFor="serverUrl">{t('server_url')}</label>
+                                    <FieldHint text={t('server_url_hint')} />
+                                </span>
+                                <input
+                                    type="url"
+                                    id="serverUrl"
+                                    value={serverUrl}
+                                    onChange={(e) => setServerUrl(e.target.value)}
+                                    placeholder="https://example.com/webdav/"
+                                />
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="retentionDays">{t('retention_policy')}</label>
-                                <select
-                                    id="retentionDays"
-                                    value={retentionDays}
-                                    onChange={(e) => setRetentionDays(parseInt(e.target.value))}
-                                    className="form-select"
-                                    style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }}
-                                >
-                                    <option value={7}>{t('retain_7d')}</option>
-                                    <option value={30}>{t('retain_30d')}</option>
-                                    <option value={90}>{t('retain_90d')}</option>
-                                    <option value={365}>{t('retain_1y')}</option>
-                                    <option value={-1}>{t('retain_forever')}</option>
-                                </select>
+                                <label htmlFor="username">{t('username')}</label>
+                                <input
+                                    type="text"
+                                    id="username"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    placeholder={t('username')}
+                                />
                             </div>
-                        </>
-                    )}
 
-                    {/* Sync on startup toggle | 启动时同步开关 */}
-                    <div className="toggle-setting" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderTop: '1px solid var(--color-border)', marginTop: '16px' }}>
-                        <span style={{ fontSize: '14px', color: 'var(--color-text-primary)' }}>{t('sync_on_startup')}</span>
-                        <label className="toggle-switch" style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px' }}>
-                            <input
-                                type="checkbox"
-                                checked={syncOnStartup}
-                                onChange={(e) => setSyncOnStartup(e.target.checked)}
-                                style={{ opacity: 0, width: 0, height: 0 }}
-                            />
-                            <span style={{
-                                position: 'absolute',
-                                cursor: 'pointer',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                backgroundColor: syncOnStartup ? 'var(--color-primary)' : 'var(--color-border)',
-                                transition: '0.3s',
-                                borderRadius: '24px'
-                            }}>
-                                <span style={{
-                                    position: 'absolute',
-                                    content: '""',
-                                    height: '18px',
-                                    width: '18px',
-                                    left: syncOnStartup ? '23px' : '3px',
-                                    bottom: '3px',
-                                    backgroundColor: 'var(--color-bg-primary)',
-                                    transition: '0.3s',
-                                    borderRadius: '50%',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                                }}></span>
-                            </span>
-                        </label>
-                    </div>
+                            <div className="form-group">
+                                <label htmlFor="password">{t('password')}</label>
+                                <input
+                                    type="password"
+                                    id="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder={t('password')}
+                                />
+                            </div>
+                        </div>
 
-                    <div className="button-group">
-                        <button
-                            className="btn-secondary"
-                            onClick={handleSaveConfig}
-                        >
-                            💾 {t('btn_save_config')}
-                        </button>
-                        <button
-                            className="btn-primary"
-                            onClick={handleBackup}
-                            disabled={loading}
-                        >
-                            {loading ? `⏳ ${t('backup_process')}` : `☁️ ${t('btn_backup_now')}`}
-                        </button>
-                    </div>
+                        <div className="button-group webdav-primary-actions">
+                            <button
+                                type="button"
+                                className="btn-secondary"
+                                onClick={handleSaveConfig}
+                            >
+                                <span className="btn-icon"><SaveIcon /></span>
+                                {t('btn_save_config')}
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-primary"
+                                onClick={handleBackup}
+                                disabled={loading}
+                            >
+                                <span className="btn-icon">{loading ? <SpinnerIcon /> : <CloudUploadIcon />}</span>
+                                {loading ? t('backup_process') : t('btn_backup_now')}
+                            </button>
+                        </div>
+                    </section>
 
-                    <div className="button-group" style={{ marginTop: '8px' }}>
-                        <button
-                            className="btn-secondary"
-                            onClick={listBackups}
-                            disabled={restoreLoading}
-                            style={{ width: '100%' }}
-                        >
-                            {restoreLoading ? `⏳ ${t('restore_process')}` : `📥 ${t('btn_restore_cloud')}`}
-                        </button>
-                    </div>
+                    <section className="webdav-section">
+                        <h3>{t('webdav_automation')}</h3>
 
-                    {showRestoreList && backupFiles.length > 0 && (
-                        <div className="backup-list" style={{ marginTop: '16px', padding: '12px', background: 'var(--color-bg-secondary)', borderRadius: '8px' }}>
-                            <h4 style={{ margin: '0 0 12px 0', fontSize: '14px' }}>{t('select_restore_backup')}</h4>
-                            <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                                {backupFiles.map((file) => (
-                                    <div
-                                        key={file.name}
-                                        onClick={() => handleRestore(file.name)}
-                                        style={{
-                                            padding: '8px 12px',
-                                            marginBottom: '4px',
-                                            background: 'var(--color-bg-primary)',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                            fontSize: '13px',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center'
+                        <div className="webdav-toggle-grid">
+                            <div className="toggle-setting webdav-toggle-compact">
+                                <span>{t('auto_backup')}</span>
+                                <label className="toggle-switch">
+                                    <input
+                                        type="checkbox"
+                                        aria-label={t('auto_backup')}
+                                        checked={autoBackup}
+                                        onChange={(e) => setAutoBackup(e.target.checked)}
+                                    />
+                                    <span className="toggle-slider" />
+                                </label>
+                            </div>
+
+                            <div className="toggle-setting webdav-toggle-compact">
+                                <span>{t('sync_on_startup')}</span>
+                                <label className="toggle-switch">
+                                    <input
+                                        type="checkbox"
+                                        aria-label={t('sync_on_startup')}
+                                        checked={syncOnStartup}
+                                        onChange={(e) => setSyncOnStartup(e.target.checked)}
+                                    />
+                                    <span className="toggle-slider" />
+                                </label>
+                            </div>
+                        </div>
+
+                        {autoBackup && (
+                            <div className="webdav-policy-grid">
+                                <div className="form-group">
+                                    <label htmlFor="backupInterval">{t('backup_frequency')}</label>
+                                    <select
+                                        id="backupInterval"
+                                        value={backupInterval}
+                                        onChange={(e) => setBackupInterval(e.target.value)}
+                                        className="form-select"
+                                    >
+                                        <option value="30">{t('freq_30m')}</option>
+                                        <option value="60">{t('freq_1h')}</option>
+                                        <option value="360">{t('freq_6h')}</option>
+                                        <option value="720">{t('freq_12h')}</option>
+                                        <option value="1440">{t('freq_24h')}</option>
+                                        <option value="10080">{t('freq_week')}</option>
+                                    </select>
+                                </div>
+
+                                <div className="form-group">
+                                    <label htmlFor="retentionDays">{t('retention_policy')}</label>
+                                    <select
+                                        id="retentionDays"
+                                        value={retentionDays}
+                                        onChange={(e) => setRetentionDays(parseInt(e.target.value))}
+                                        className="form-select"
+                                    >
+                                        <option value={7}>{t('retain_7d')}</option>
+                                        <option value={30}>{t('retain_30d')}</option>
+                                        <option value={90}>{t('retain_90d')}</option>
+                                        <option value={365}>{t('retain_1y')}</option>
+                                        <option value={-1}>{t('retain_forever')}</option>
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+
+                    </section>
+
+                    <section className="webdav-section">
+                        <h3>{t('webdav_manual_actions')}</h3>
+
+                        <div className="button-group button-group-compact webdav-action-grid">
+                            <button
+                                type="button"
+                                className="btn-secondary"
+                                onClick={listBackups}
+                                disabled={restoreLoading}
+                            >
+                                <span className="btn-icon">{restoreLoading ? <SpinnerIcon /> : <DownloadIcon />}</span>
+                                {restoreLoading ? t('restore_process') : t('btn_restore_cloud')}
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-secondary"
+                                onClick={async () => {
+                                    const logs = await getSyncLogs();
+                                    setSyncLogs(logs);
+                                    setShowLogs(!showLogs);
+                                }}
+                            >
+                                <span className="btn-icon"><LogsIcon /></span>
+                                {t('view_sync_logs')}
+                            </button>
+                        </div>
+
+                        {showRestoreList && backupFiles.length > 0 && (
+                            <div className="backup-list">
+                                <h4>{t('select_restore_backup')}</h4>
+                                <div className="backup-list-scroll">
+                                    {backupFiles.map((file) => (
+                                        <button
+                                            type="button"
+                                            key={file.name}
+                                            onClick={() => handleRestore(file.name)}
+                                            className="backup-file-row"
+                                        >
+                                            <span className="backup-file-main">
+                                                <span className="backup-file-name">{file.name}</span>
+                                                <span className="backup-file-device">{file.deviceName}</span>
+                                            </span>
+                                            <span className="backup-file-date">{file.date}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {showLogs && (
+                            <div className="backup-list sync-log-panel">
+                                <div className="backup-list-header">
+                                    <h4>{t('sync_logs_title')}</h4>
+                                    <button
+                                        type="button"
+                                        className="btn-subtle"
+                                        onClick={async () => {
+                                            await clearSyncLogs();
+                                            setSyncLogs([]);
+                                            showToast('success', t('logs_cleared'));
                                         }}
                                     >
-                                        <span>{file.name}</span>
-                                        <span style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>{file.date}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-
-                    {/* 查看同步日志按钮 */}
-                    <div className="button-group" style={{ marginTop: '8px' }}>
-                        <button
-                            className="btn-secondary"
-                            onClick={async () => {
-                                const logs = await getSyncLogs();
-                                setSyncLogs(logs);
-                                setShowLogs(!showLogs);
-                            }}
-                            style={{ width: '100%' }}
-                        >
-                            📋 {t('view_sync_logs')}
-                        </button>
-                    </div>
-
-                    {/* 日志列表 */}
-                    {showLogs && (
-                        <div className="backup-list" style={{ marginTop: '16px', padding: '12px', background: 'var(--color-bg-secondary)', borderRadius: '8px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                <h4 style={{ margin: 0, fontSize: '14px' }}>📋 {t('sync_logs_title')}</h4>
-                                <button
-                                    onClick={async () => {
-                                        await clearSyncLogs();
-                                        setSyncLogs([]);
-                                        showToast('success', t('logs_cleared'));
-                                    }}
-                                    style={{
-                                        background: 'transparent',
-                                        border: '1px solid var(--color-border)',
-                                        padding: '4px 8px',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        cursor: 'pointer',
-                                        color: 'var(--color-text-secondary)'
-                                    }}
-                                >
-                                    🗑️ {t('clear_logs')}
-                                </button>
-                            </div>
-                            <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                                {syncLogs.length === 0 ? (
-                                    <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '13px', padding: '16px' }}>
-                                        {t('no_sync_logs')}
-                                    </div>
-                                ) : (
-                                    syncLogs.map((log, index) => {
-                                        const localizedLog = getLocalizedSyncLogText(log, t);
-                                        return (
-                                            <div
-                                                key={index}
-                                                style={{
-                                                    padding: '8px 12px',
-                                                    marginBottom: '4px',
-                                                    background: 'var(--color-bg-primary)',
-                                                    borderRadius: '6px',
-                                                    fontSize: '12px',
-                                                    borderLeft: `3px solid ${log.level === 'ERROR' ? '#ef4444' : log.level === 'WARN' ? '#f59e0b' : '#22c55e'}`
-                                                }}
-                                            >
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                                    <span style={{ fontWeight: 500, color: log.level === 'ERROR' ? '#ef4444' : 'var(--color-text-primary)' }}>
-                                                        {log.level === 'ERROR' ? '❌' : log.level === 'WARN' ? '⚠️' : '✅'} {localizedLog.message}
-                                                    </span>
-                                                    <span style={{ color: 'var(--color-text-secondary)', fontSize: '11px' }}>
-                                                        {formatLogTime(log.timestamp)}
-                                                    </span>
-                                                </div>
-                                                {localizedLog.details && (
-                                                    <div style={{ color: 'var(--color-text-secondary)', fontSize: '11px' }}>
-                                                        {localizedLog.details}
+                                        <span className="btn-icon"><TrashIcon /></span>
+                                        {t('clear_logs')}
+                                    </button>
+                                </div>
+                                <div className="sync-log-list">
+                                    {syncLogs.length === 0 ? (
+                                        <div className="empty-state">
+                                            {t('no_sync_logs')}
+                                        </div>
+                                    ) : (
+                                        syncLogs.map((log, index) => {
+                                            const localizedLog = getLocalizedSyncLogText(log, t);
+                                            const levelClass = `sync-log-${log.level.toLowerCase()}`;
+                                            return (
+                                                <div
+                                                    key={index}
+                                                    className={`sync-log-entry ${levelClass}`}
+                                                >
+                                                    <div className="sync-log-main">
+                                                        <span className="sync-log-message">
+                                                            <span className="status-dot" aria-hidden="true" />
+                                                            {localizedLog.message}
+                                                        </span>
+                                                        <span className="sync-log-time">
+                                                            {formatLogTime(log.timestamp)}
+                                                        </span>
                                                     </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })
-                                )}
+                                                    {localizedLog.details && (
+                                                        <div className="sync-log-details">
+                                                            {localizedLog.details}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    <div className="backup-tips">
-                        <h4>💡 {t('backup_tips_title')}</h4>
-                        <ul>
-                            <li><strong>Nextcloud:</strong> https://your-domain/remote.php/dav/files/username/</li>
-                            <li><strong>Synology:</strong> https://your-nas/webdav/</li>
-                        </ul>
-                    </div>
+                        <details className="backup-tips backup-tips-details">
+                            <summary>{t('backup_tips_title')}</summary>
+                            <ul>
+                                <li><strong>Nextcloud:</strong> https://your-domain/remote.php/dav/files/username/</li>
+                                <li><strong>Synology:</strong> https://your-nas/webdav/</li>
+                            </ul>
+                        </details>
+                    </section>
                 </div>
             </div>
         </div>

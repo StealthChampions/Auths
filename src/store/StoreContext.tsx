@@ -24,15 +24,22 @@ interface GlobalState {
   backup: BackupState;
 }
 
+type StoreAction =
+  | { type: 'accounts'; payload: AccountsAction }
+  | { type: 'style'; payload: StyleAction }
+  | { type: 'menu'; payload: MenuAction }
+  | { type: 'notification'; payload: NotificationAction }
+  | { type: 'backup'; payload: BackupAction };
+
 // Create the context | 创建 Context
 const StoreContext = createContext<{
   state: GlobalState;
-  dispatch: React.Dispatch<any>;
+  dispatch: React.Dispatch<StoreAction>;
 } | undefined>(undefined);
 
 // Create a provider component
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer((state: GlobalState, action: any) => {
+  const [state, dispatch] = useReducer((state: GlobalState, action: StoreAction): GlobalState => {
     switch (action.type) {
       case 'accounts':
         return { ...state, accounts: accountsReducer(state.accounts, action.payload) };
@@ -52,12 +59,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return state;
     }
   }, {
-    accounts: accountsReducer(undefined, { type: 'init' } as any),
-    style: styleReducer(undefined, { type: 'init' } as any),
-    menu: menuReducer(undefined, { type: 'init' } as any),
-    notification: notificationReducer(undefined, { type: 'init' } as any),
+    accounts: accountsReducer(undefined, { type: 'init' }),
+    style: styleReducer(undefined, { type: 'init' }),
+    menu: menuReducer(undefined, { type: 'init' }),
+    notification: notificationReducer(undefined, { type: 'init' }),
 
-    backup: backupReducer(undefined, { type: 'init' } as any),
+    backup: backupReducer(undefined, { type: 'init' }),
 
 
 
@@ -121,7 +128,6 @@ export function useBackup() {
     dispatch: (action: BackupAction) => dispatch({ type: 'backup', payload: action })
   };
 }
-
 
 
 

@@ -13,6 +13,7 @@ import { dedupeAccountsBySecret, generateEntryHash, hasDuplicateSecret } from '@
 import { decryptWebDAVPassword, migratePlainWebDAVConfig } from '@/utils/webdav-credentials';
 import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, uploadWebDAVBackup } from '@/utils/webdav-sync';
 import { addLocalizedSyncLog } from '@/utils/sync-logger';
+import { debugError, debugLog } from '@/utils/logger';
 
 type LocaleMessages = Record<string, { message: string; description?: string }>;
 
@@ -89,7 +90,7 @@ export default defineBackground(() => {
   // Handle auto backup alarm | 处理自动备份定时器
   const handleAutoBackupAlarm = async (alarm: chrome.alarms.Alarm) => {
     if (alarm.name === 'autoBackup') {
-      console.log('[Auths Background] Auto backup alarm triggered');
+      debugLog('[Auths Background] Auto backup alarm triggered');
 
       try {
         // Get WebDAV config | 获取 WebDAV 配置
@@ -98,7 +99,7 @@ export default defineBackground(() => {
         const password = await decryptWebDAVPassword(config);
 
         if (!config || !config.serverUrl || !config.username || !password) {
-          console.log('[Auths Background] WebDAV not configured, skipping auto backup');
+          debugLog('[Auths Background] WebDAV not configured, skipping auto backup');
           return;
         }
         // Get entries and timestamps | 获取账户数据和时间戳
@@ -107,7 +108,7 @@ export default defineBackground(() => {
         const localTimestamp = entriesResult.entriesLastModified || 0;
 
         if (entries.length === 0) {
-          console.log('[Auths Background] No entries to backup');
+          debugLog('[Auths Background] No entries to backup');
           return;
         }
 
@@ -119,14 +120,14 @@ export default defineBackground(() => {
         // Sync decision based on timestamps | 基于时间戳的同步决策
         if (remoteTimestamp > localTimestamp && remoteFilename) {
           // Remote is newer, download | 远程更新，下载
-          console.log('[Auths Background] Remote is newer, downloading...');
+          debugLog('[Auths Background] Remote is newer, downloading...');
           await addLocalizedSyncLog('INFO', 'AUTO_BACKUP_TRIGGER', {
             messageKey: 'sync_downloading',
             detailsKey: 'log_details_file',
             detailsArgs: [remoteFilename]
           });
 
-          const backupData = await downloadWebDAVBackup(config.serverUrl, config.username, password, remoteFilename);
+          const backupData = await downloadWebDAVBackup<OTPEntryInterface>(config.serverUrl, config.username, password, remoteFilename);
           const allAccounts = [...entries, ...backupData.accounts];
           const {
             accounts: deduplicatedAccounts,
@@ -143,7 +144,7 @@ export default defineBackground(() => {
           });
         } else if (localTimestamp > remoteTimestamp) {
           // Local is newer, upload | 本地更新，上传
-          console.log('[Auths Background] Local is newer, uploading...');
+          debugLog('[Auths Background] Local is newer, uploading...');
           await addLocalizedSyncLog('INFO', 'AUTO_BACKUP_TRIGGER', {
             messageKey: 'sync_uploading',
             detailsFallback: config.serverUrl
@@ -172,7 +173,7 @@ export default defineBackground(() => {
 
         } else {
           // Already up to date | 已是最新
-          console.log('[Auths Background] Already up to date');
+          debugLog('[Auths Background] Already up to date');
           await addLocalizedSyncLog('INFO', 'AUTO_BACKUP_TRIGGER', {
             messageKey: 'log_auto_backup_skipped',
             detailsKey: 'log_details_local_remote_up_to_date'
@@ -196,9 +197,9 @@ export default defineBackground(() => {
           });
         }
 
-        console.log('[Auths Background] Auto sync completed');
+        debugLog('[Auths Background] Auto sync completed');
       } catch (error) {
-        console.error('[Auths Background] Auto backup error:', error);
+        debugError('[Auths Background] Auto backup error:', error);
 
         await addLocalizedSyncLog('ERROR', 'BACKUP_FAILED', {
           messageKey: 'log_auto_backup_failed',
@@ -287,7 +288,7 @@ export default defineBackground(() => {
     // Treat entries with no secret (locked / encrypted) as not visible — when
     // every matched entry is locked, show no badge so we don't leak counts.
     // 已加密的条目（secret 为 null）视为已锁定，全部锁定时不显示角标。
-    const visibleEntries = entries.filter((e: any) => e && e.secret);
+    const visibleEntries = (entries as OTPEntryInterface[]).filter((entry) => entry.secret);
     if (visibleEntries.length === 0) {
       await setBadgeForTab(tab.id, 0);
       return;
@@ -458,11 +459,11 @@ export default defineBackground(() => {
     // Handle QR code data from content script - save account directly
     // 处理来自 content script 的二维码数据 - 直接保存账户
     if (message.action === 'saveQRAccount') {
-      console.log('[Auths Background] Received QR data:', message.qrData);
+      debugLog('[Auths Background] Received QR data');
       (async () => {
         try {
           const accountData = parseOtpAuthUrl(message.qrData);
-          console.log('[Auths Background] Parsed account:', accountData);
+          debugLog('[Auths Background] Parsed QR account');
 
           // Add hash and other fields
           // 添加哈希值和其他字段
@@ -483,7 +484,7 @@ export default defineBackground(() => {
           const isDuplicate = hasDuplicateSecret(entries, accountData.secret);
 
           if (isDuplicate) {
-            console.log('[Auths Background] Duplicate account detected');
+            debugLog('[Auths Background] Duplicate account detected');
             const duplicateMsg = await getMessage('account_already_exists');
             sendResponse({
               success: false,
@@ -495,9 +496,9 @@ export default defineBackground(() => {
           }
 
           entries.push(newEntry);
-          await chrome.storage.local.set({ entries });
+          await chrome.storage.local.set({ entries, entriesLastModified: Date.now() });
 
-          console.log('[Auths Background] Account saved successfully');
+          debugLog('[Auths Background] Account saved successfully');
           const successMsg = await getMessage('account_added_successfully');
 
           // Send notification if permission granted | 如果有权限则发送通知
@@ -513,7 +514,7 @@ export default defineBackground(() => {
 
           sendResponse({ success: true, account: accountData, message: successMsg });
         } catch (error) {
-          console.error('[Auths Background] Error parsing QR:', error);
+          debugError('[Auths Background] Error parsing QR:', error);
           const failedMsg = await getMessage('qr_add_failed');
           sendResponse({ success: false, error: (error as Error).message, message: failedMsg });
         }

@@ -2,7 +2,6 @@ export interface AccountLike {
   secret?: string | null;
   hash?: string;
   pinned?: boolean;
-  [key: string]: unknown;
 }
 
 export interface DedupeAccountsOptions {
@@ -31,18 +30,19 @@ function mergeDuplicateAccount<T extends AccountLike>(
 ): T {
   const preferred = duplicatePreference === 'last' ? incoming : existing;
   const fallback = duplicatePreference === 'last' ? existing : incoming;
-  const merged: AccountLike = { ...fallback };
+  const merged = { ...fallback } as T & Record<string, unknown>;
+  const mergedRecord = merged as Record<string, unknown>;
 
   for (const [key, value] of Object.entries(preferred)) {
     if (value !== undefined && value !== null) {
-      merged[key] = value;
+      mergedRecord[key] = value;
     }
   }
 
   // Keep the retained entry identity stable while still merging mutable fields.
   merged.hash = existing.hash;
 
-  return merged as T;
+  return merged;
 }
 
 export function dedupeAccountsBySecret<T extends AccountLike>(

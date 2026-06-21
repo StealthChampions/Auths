@@ -13,6 +13,7 @@ export interface NotificationState {
 }
 
 export type NotificationAction =
+  | { type: 'init' }
   | { type: 'alert'; payload: string } // Default error/warning
   | { type: 'success'; payload: string }
   | { type: 'error'; payload: string }
@@ -30,6 +31,9 @@ const initialState: NotificationState = {
 
 export function notificationReducer(state = initialState, action: NotificationAction): NotificationState {
   switch (action.type) {
+    case 'init':
+      return state;
+
     case 'alert':
       return {
         ...state,

@@ -46,7 +46,7 @@ All your data is stored **locally** on your device:
 - **Account secrets**: Stored securely in your browser's local storage
 - **Settings and preferences**: Stored in your browser's local storage
 - **WebDAV configuration**: Stored locally when you enable WebDAV. The WebDAV password is encrypted before being stored locally, and the encryption key remains in your browser.
-- **WebDAV device ID**: A random per-install device ID is stored locally and used only in WebDAV backup filenames to keep retention cleanup scoped to the current browser profile.
+- **WebDAV device ID and device name**: A random per-install device ID and an editable local device name are stored locally. New WebDAV backups include both in backup metadata, and include the device ID plus a sanitized device-name slug in the backup filename so backups can be identified while retention cleanup stays scoped to the current browser profile.
 - **No cloud storage by default**: Your data never leaves your device unless you explicitly enable optional backup features
 
 **中文：**
@@ -55,7 +55,7 @@ All your data is stored **locally** on your device:
 - **账户密钥**：安全存储在浏览器的本地存储中
 - **设置和偏好**：存储在浏览器的本地存储中
 - **WebDAV 配置**：仅在您启用 WebDAV 时本地保存。WebDAV 密码会先加密再保存到本地，加密密钥保留在您的浏览器中。
-- **WebDAV 设备 ID**：随机生成的每安装实例设备 ID 会本地保存，仅用于 WebDAV 备份文件名，以便保留策略只清理当前浏览器配置生成的备份。
+- **WebDAV 设备 ID 和设备名称**：随机生成的每安装实例设备 ID 与可编辑的本地设备名称会保存在本地。新 WebDAV 备份会在备份元数据中包含这两项，并在备份文件名中包含设备 ID 与经过安全处理的设备名称片段，以便识别备份来源，同时保留策略仍只清理当前浏览器配置生成的备份。
 - **默认无云存储**：除非您明确启用可选备份功能，否则数据永远不会离开您的设备
 
 ---
@@ -69,7 +69,7 @@ If you choose to enable WebDAV backup:
 - We do not have access to your WebDAV credentials or data
 - You are responsible for the security of your WebDAV server
 - Host permissions are requested **per-server** only when you configure backup
-- Backup filenames include a local random device ID so cleanup only removes backups created by the current browser profile. Older legacy backup filenames remain readable/restorable and are not proactively deleted by the retention policy.
+- Backup filenames include a local random device ID and, for new backups, a sanitized device-name slug so cleanup only removes backups created by the current browser profile and you can identify the backup source. Older legacy backup filenames remain readable/restorable and are not proactively deleted by the retention policy.
 
 **中文：**
 如果您选择启用 WebDAV 备份：
@@ -78,7 +78,7 @@ If you choose to enable WebDAV backup:
 - 我们无法访问您的 WebDAV 凭据或数据
 - 您需要自行负责 WebDAV 服务器的安全
 - 仅在您配置备份时**按服务器**请求主机权限
-- 备份文件名会包含本地随机设备 ID，因此保留策略只删除当前浏览器配置创建的备份。旧版文件名的备份仍可读取/恢复，保留策略不会主动删除这些旧备份。
+- 备份文件名会包含本地随机设备 ID；新备份还会包含经过安全处理的设备名称片段，因此保留策略只删除当前浏览器配置创建的备份，同时您可以识别备份来源。旧版文件名的备份仍可读取/恢复，保留策略不会主动删除这些旧备份。
 
 ---
 
@@ -144,12 +144,12 @@ ever uploaded.
 **English:**
 - All sensitive data is stored locally in your browser
 - No remote code is used - all logic is bundled within the extension
-- Source code is open and auditable on [GitHub](https://github.com/user/Auths)
+- Source code is open and auditable on [GitHub](https://github.com/StealthChampions/Auths)
 
 **中文：**
 - 所有敏感数据都存储在您的浏览器本地
 - 不使用远程代码 - 所有逻辑都打包在扩展内
-- 源代码开放，可在 [GitHub](https://github.com/user/Auths) 上审计
+- 源代码开放，可在 [GitHub](https://github.com/StealthChampions/Auths) 上审计
 
 ---
 
@@ -177,11 +177,11 @@ We may update this Privacy Policy from time to time. Changes will be posted to t
 
 **English:**
 If you have any questions about this Privacy Policy, please:
-- Open an issue on [GitHub](https://github.com/user/Auths/issues)
+- Open an issue on [GitHub](https://github.com/StealthChampions/Auths/issues)
 
 **中文：**
 如果您对本隐私政策有任何疑问，请：
-- 在 [GitHub](https://github.com/user/Auths/issues) 上提交 Issue
+- 在 [GitHub](https://github.com/StealthChampions/Auths/issues) 上提交 Issue
 
 ---
 

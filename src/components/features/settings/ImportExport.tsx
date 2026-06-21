@@ -16,6 +16,27 @@ interface ImportExportProps {
   onClose: () => void;
 }
 
+const DownloadIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 3v11M8 10l4 4 4-4" />
+    <path d="M5 17v3h14v-3" />
+  </svg>
+);
+
+const UploadIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 21V10M8 14l4-4 4 4" />
+    <path d="M5 7V4h14v3" />
+  </svg>
+);
+
+const AlertIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 9v4M12 17h.01" />
+    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+  </svg>
+);
+
 export default function ImportExport({ onClose }: ImportExportProps) {
   const [activeTab, setActiveTab] = useState<'export' | 'import'>('export');
   const [exportPassword, setExportPassword] = useState('');
@@ -166,19 +187,21 @@ export default function ImportExport({ onClose }: ImportExportProps) {
     <div className="import-export-modal">
       <div className="modal-header">
         <h2>{t('backup_restore_title')}</h2>
-        <button className="close-btn" onClick={onClose} title={t('close')}>
+        <button type="button" className="close-btn" onClick={onClose} title={t('close')} aria-label={t('close')}>
           ✕
         </button>
       </div>
 
       <div className="tabs">
         <button
+          type="button"
           className={`tab ${activeTab === 'export' ? 'active' : ''}`}
           onClick={() => setActiveTab('export')}
         >
           {t('tab_export')}
         </button>
         <button
+          type="button"
           className={`tab ${activeTab === 'import' ? 'active' : ''}`}
           onClick={() => setActiveTab('import')}
         >
@@ -219,10 +242,12 @@ export default function ImportExport({ onClose }: ImportExportProps) {
             </div>
 
             <button
+              type="button"
               className="btn-primary btn-full"
               onClick={handleExport}
             >
-              📥 {t('btn_export_file')}
+              <span className="btn-icon"><DownloadIcon /></span>
+              {t('btn_export_file')}
             </button>
           </div>
         ) : (
@@ -258,15 +283,18 @@ export default function ImportExport({ onClose }: ImportExportProps) {
             </div>
 
             <div className="import-warning">
-              ⚠️ {t('import_warning')}
+              <span className="import-warning-icon"><AlertIcon /></span>
+              {t('import_warning')}
             </div>
 
             <button
+              type="button"
               className="btn-primary btn-full"
               onClick={handleImport}
               disabled={!importFile}
             >
-              📤 {t('btn_import_file')}
+              <span className="btn-icon"><UploadIcon /></span>
+              {t('btn_import_file')}
             </button>
           </div>
         )}
