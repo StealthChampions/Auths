@@ -28,6 +28,17 @@ export default defineContentScript({
       return false;
     });
 
+    async function getLocalizedMessage(key: string, fallback: string): Promise<string> {
+      try {
+        const response = await chrome.runtime.sendMessage({ action: 'getMessage', key });
+        if (response?.message && response.message !== key) return response.message;
+      } catch {
+        // Fall back to extension locale below.
+      }
+
+      return chrome.i18n.getMessage(key) || fallback;
+    }
+
     function startRegionSelection(): Promise<{ success: boolean; error?: string }> {
       return new Promise((resolve, reject) => {
         // Remove any existing overlay first
@@ -72,7 +83,10 @@ export default defineContentScript({
         // 创建提示工具栏
         const tooltip = document.createElement('div');
         tooltip.id = 'auths-tooltip';
-        tooltip.textContent = chrome.i18n.getMessage('qr_region_instruction') || 'Click and drag to select QR code area. Press ESC to cancel.';
+        tooltip.textContent = chrome.i18n.getMessage('qr_region_instruction') || 'Drag to select QR code region. Press ESC to cancel.';
+        getLocalizedMessage('qr_region_instruction', tooltip.textContent).then((message) => {
+          tooltip.textContent = message;
+        });
         tooltip.style.cssText = `
           position: fixed;
           top: 20px;
@@ -199,24 +213,23 @@ export default defineContentScript({
 
               if (saveResponse.success) {
                 console.log('[Auths Content] Account saved via background');
-                showToast(saveResponse.message || 'Account added successfully!', 'success');
+                const message = saveResponse.message || await getLocalizedMessage('account_added_successfully', 'Account added successfully!');
+                showToast(message, 'success');
                 resolve({ success: true });
               } else if (saveResponse.isDuplicate) {
                 console.log('[Auths Content] Duplicate account detected');
-                showToast(saveResponse.message || 'This account already exists!', 'error');
+                const message = saveResponse.message || await getLocalizedMessage('account_already_exists', 'This account already exists!');
+                showToast(message, 'error');
                 resolve({ success: false, error: 'duplicate' });
               } else {
-                showToast(saveResponse.message || 'Failed to add account', 'error');
+                const message = saveResponse.message || await getLocalizedMessage('qr_add_failed', 'Failed to add account');
+                showToast(message, 'error');
                 resolve({ success: false, error: saveResponse.error });
               }
             } else {
               console.log('[Auths Content] No QR code found');
-              // Request localized message from background
-              const notFoundResponse = await chrome.runtime.sendMessage({
-                action: 'getMessage',
-                key: 'qr_error_not_found'
-              });
-              showToast(notFoundResponse?.message || 'QR code not found', 'error');
+              const message = await getLocalizedMessage('qr_error_not_found', 'QR code not found');
+              showToast(message, 'error');
               resolve({ success: false, error: 'QR code not found' });
             }
           } catch (error) {

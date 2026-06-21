@@ -8,7 +8,7 @@
 import React, { useState } from 'react';
 import { useI18n } from '@/i18n';
 import { useNotification, useAccounts } from '@/store';
-import { addSyncLog, getSyncLogs, clearSyncLogs, formatLogTime, type SyncLogEntry } from '@/utils/sync-logger';
+import { addLocalizedSyncLog, getLocalizedSyncLogText, getSyncLogs, clearSyncLogs, formatLogTime, type SyncLogEntry } from '@/utils/sync-logger';
 import { dedupeAccountsBySecret } from '@/utils/accounts';
 import { decryptWebDAVPassword, migratePlainWebDAVConfig, withEncryptedWebDAVPassword } from '@/utils/webdav-credentials';
 import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, listWebDAVBackups, uploadWebDAVBackup } from '@/utils/webdav-sync';
@@ -85,18 +85,20 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         try {
             cleanup = await cleanupExpiredWebDAVBackups(serverUrl, username, password, retentionDays);
         } catch (error) {
-            await addSyncLog('WARN', 'BACKUP_SUCCESS', t('retention_cleanup_failed'), error instanceof Error ? error.message : t('unknown_error'));
+            await addLocalizedSyncLog('WARN', 'BACKUP_SUCCESS', {
+                messageKey: 'retention_cleanup_failed',
+                detailsFallback: error instanceof Error ? error.message : t('unknown_error')
+            });
             return;
         }
 
         if (cleanup.skipped) return;
         if (cleanup.deleted.length > 0 || cleanup.failed.length > 0) {
-            await addSyncLog(
-                cleanup.failed.length > 0 ? 'WARN' : 'INFO',
-                'BACKUP_SUCCESS',
-                t('retention_cleanup_done'),
-                `删除 ${cleanup.deleted.length} 个过期备份, 失败 ${cleanup.failed.length} 个`
-            );
+            await addLocalizedSyncLog(cleanup.failed.length > 0 ? 'WARN' : 'INFO', 'BACKUP_SUCCESS', {
+                messageKey: 'retention_cleanup_done',
+                detailsKey: 'log_details_retention_cleanup',
+                detailsArgs: [String(cleanup.deleted.length), String(cleanup.failed.length)]
+            });
         }
     };
 
@@ -149,7 +151,10 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         }
 
         setRestoreLoading(true);
-        await addSyncLog('INFO', 'RESTORE_START', t('log_restore_start'), filename);
+        await addLocalizedSyncLog('INFO', 'RESTORE_START', {
+            messageKey: 'log_restore_start',
+            detailsFallback: filename
+        });
 
         try {
             const backupData = await downloadWebDAVBackup(serverUrl, username, password, filename);
@@ -175,12 +180,19 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             // Update global state immediately | 立即更新全局状态
             accountsDispatch({ type: 'setEntries', payload: deduplicatedAccounts });
 
-            await addSyncLog('INFO', 'RESTORE_SUCCESS', t('log_restore_success'), `导入 ${importCount} 个账户, 去重 ${removedDuplicates} 个`);
+            await addLocalizedSyncLog('INFO', 'RESTORE_SUCCESS', {
+                messageKey: 'log_restore_success',
+                detailsKey: 'log_details_imported_deduped',
+                detailsArgs: [String(importCount), String(removedDuplicates)]
+            });
             showToast('success', t('restore_success', [importCount.toString()]));
             setShowRestoreList(false);
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : t('unknown_error');
-            await addSyncLog('ERROR', 'RESTORE_FAILED', t('log_restore_failed'), errorMsg);
+            await addLocalizedSyncLog('ERROR', 'RESTORE_FAILED', {
+                messageKey: 'log_restore_failed',
+                detailsFallback: errorMsg
+            });
             showToast('error', t('restore_failed') + errorMsg);
         } finally {
             setRestoreLoading(false);
@@ -236,7 +248,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         if (autoBackup) {
             // Request alarms permission dynamically | 动态请求 alarms 权限
             const hasAlarmsPermission = await chrome.permissions.request({ permissions: ['alarms'] });
-            if (!hasAlarmsPermission) {
+            if (!hasAlarmsPermission || !chrome.alarms?.create) {
                 showToast('error', t('permission_denied'));
                 return;
             }
@@ -246,12 +258,15 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         } else {
             // Only clear alarm if we have permission | 仅在有权限时清除定时器
             const hasAlarms = await chrome.permissions.contains({ permissions: ['alarms'] });
-            if (hasAlarms) {
+            if (hasAlarms && chrome.alarms?.clear) {
                 chrome.alarms.clear('autoBackup');
             }
         }
 
-        await addSyncLog('INFO', 'CONFIG_SAVED', t('log_config_saved'), `自动备份: ${autoBackup ? '开启' : '关闭'}`);
+        await addLocalizedSyncLog('INFO', 'CONFIG_SAVED', {
+            messageKey: 'log_config_saved',
+            detailsKey: autoBackup ? 'log_details_auto_backup_enabled' : 'log_details_auto_backup_disabled'
+        });
         await applyRetentionPolicy();
         showToast('success', t('config_saved'));
         await refreshLogs();
@@ -271,7 +286,10 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         }
 
         setLoading(true);
-        await addSyncLog('INFO', 'BACKUP_START', t('log_backup_start'), serverUrl);
+        await addLocalizedSyncLog('INFO', 'BACKUP_START', {
+            messageKey: 'log_backup_start',
+            detailsFallback: serverUrl
+        });
 
         try {
             // Get entries from storage | 从存储中获取账户数据
@@ -294,18 +312,29 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             if (removedDuplicates > 0) {
                 await chrome.storage.local.set({ entries: deduplicatedEntries, entriesLastModified: Date.now() });
                 accountsDispatch({ type: 'setEntries', payload: deduplicatedEntries });
-                await addSyncLog('INFO', 'BACKUP_START', '上传前去重', `移除 ${removedDuplicates} 个重复账户`);
+                await addLocalizedSyncLog('INFO', 'BACKUP_START', {
+                    messageKey: 'log_pre_upload_dedupe',
+                    detailsKey: 'log_details_removed_duplicates',
+                    detailsArgs: [String(removedDuplicates)]
+                });
                 entries = deduplicatedEntries;
             }
 
             const filename = await uploadWebDAVBackup(serverUrl, username, password, entries);
             await applyRetentionPolicy();
 
-            await addSyncLog('INFO', 'BACKUP_SUCCESS', t('log_backup_success'), `文件: ${filename}`);
+            await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {
+                messageKey: 'log_backup_success',
+                detailsKey: 'log_details_file',
+                detailsArgs: [filename]
+            });
             showToast('success', t('backup_success'));
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : t('unknown_error');
-            await addSyncLog('ERROR', 'BACKUP_FAILED', t('log_backup_failed'), errorMsg);
+            await addLocalizedSyncLog('ERROR', 'BACKUP_FAILED', {
+                messageKey: 'log_backup_failed',
+                detailsFallback: errorMsg
+            });
             showToast('error', t('backup_failed') + errorMsg);
         } finally {
             setLoading(false);
@@ -326,7 +355,9 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         }
 
         setSyncing(true);
-        await addSyncLog('INFO', 'BACKUP_START', t('sync_checking'));
+        await addLocalizedSyncLog('INFO', 'BACKUP_START', {
+            messageKey: 'sync_checking'
+        });
 
         try {
             // 1. Get local data and its timestamp | 获取本地数据及其时间戳
@@ -364,12 +395,17 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             }
 
             await applyRetentionPolicy();
-            await addSyncLog('INFO', 'BACKUP_SUCCESS', t('sync_complete'));
+            await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {
+                messageKey: 'sync_complete'
+            });
             // Record last sync timestamp | 记录上次同步时间
             await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : t('unknown_error');
-            await addSyncLog('ERROR', 'BACKUP_FAILED', t('sync_failed') + errorMsg);
+            await addLocalizedSyncLog('ERROR', 'BACKUP_FAILED', {
+                messageKey: 'log_sync_failed',
+                detailsFallback: errorMsg
+            });
             showToast('error', t('sync_failed') + errorMsg);
         } finally {
             setSyncing(false);
@@ -691,33 +727,36 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                                         {t('no_sync_logs')}
                                     </div>
                                 ) : (
-                                    syncLogs.map((log, index) => (
-                                        <div
-                                            key={index}
-                                            style={{
-                                                padding: '8px 12px',
-                                                marginBottom: '4px',
-                                                background: 'var(--color-bg-primary)',
-                                                borderRadius: '6px',
-                                                fontSize: '12px',
-                                                borderLeft: `3px solid ${log.level === 'ERROR' ? '#ef4444' : log.level === 'WARN' ? '#f59e0b' : '#22c55e'}`
-                                            }}
-                                        >
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                                <span style={{ fontWeight: 500, color: log.level === 'ERROR' ? '#ef4444' : 'var(--color-text-primary)' }}>
-                                                    {log.level === 'ERROR' ? '❌' : log.level === 'WARN' ? '⚠️' : '✅'} {log.message}
-                                                </span>
-                                                <span style={{ color: 'var(--color-text-secondary)', fontSize: '11px' }}>
-                                                    {formatLogTime(log.timestamp)}
-                                                </span>
-                                            </div>
-                                            {log.details && (
-                                                <div style={{ color: 'var(--color-text-secondary)', fontSize: '11px' }}>
-                                                    {log.details}
+                                    syncLogs.map((log, index) => {
+                                        const localizedLog = getLocalizedSyncLogText(log, t);
+                                        return (
+                                            <div
+                                                key={index}
+                                                style={{
+                                                    padding: '8px 12px',
+                                                    marginBottom: '4px',
+                                                    background: 'var(--color-bg-primary)',
+                                                    borderRadius: '6px',
+                                                    fontSize: '12px',
+                                                    borderLeft: `3px solid ${log.level === 'ERROR' ? '#ef4444' : log.level === 'WARN' ? '#f59e0b' : '#22c55e'}`
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                    <span style={{ fontWeight: 500, color: log.level === 'ERROR' ? '#ef4444' : 'var(--color-text-primary)' }}>
+                                                        {log.level === 'ERROR' ? '❌' : log.level === 'WARN' ? '⚠️' : '✅'} {localizedLog.message}
+                                                    </span>
+                                                    <span style={{ color: 'var(--color-text-secondary)', fontSize: '11px' }}>
+                                                        {formatLogTime(log.timestamp)}
+                                                    </span>
                                                 </div>
-                                            )}
-                                        </div>
-                                    ))
+                                                {localizedLog.details && (
+                                                    <div style={{ color: 'var(--color-text-secondary)', fontSize: '11px' }}>
+                                                        {localizedLog.details}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })
                                 )}
                             </div>
                         </div>

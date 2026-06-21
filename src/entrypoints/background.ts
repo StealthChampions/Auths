@@ -12,31 +12,38 @@ import { parseSiteName, countMatchedEntries } from '@/utils/site-match';
 import { dedupeAccountsBySecret, generateEntryHash, hasDuplicateSecret } from '@/utils/accounts';
 import { decryptWebDAVPassword, migratePlainWebDAVConfig } from '@/utils/webdav-credentials';
 import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, uploadWebDAVBackup } from '@/utils/webdav-sync';
+import { addLocalizedSyncLog } from '@/utils/sync-logger';
+
+type LocaleMessages = Record<string, { message: string; description?: string }>;
 
 export default defineBackground(() => {
-  // Localized messages for toast notifications
-  // 用于 Toast 通知的本地化消息
-  const messages: Record<string, Record<string, string>> = {
-    en: {
-      account_added_successfully: 'Account added successfully!',
-      account_already_exists: 'This account already exists!',
-      qr_add_failed: 'Failed to add account',
-      qr_error_not_found: 'QR code not found in image',
-    },
-    zh_CN: {
-      account_added_successfully: '账户添加成功！',
-      account_already_exists: '该账户已存在，请勿重复添加。',
-      qr_add_failed: '添加账户失败',
-      qr_error_not_found: '图片中未找到二维码',
+  const localeCache: Record<string, LocaleMessages> = {};
+
+  async function loadLocaleMessages(locale: string): Promise<LocaleMessages> {
+    if (localeCache[locale]) return localeCache[locale];
+
+    try {
+      const response = await fetch(chrome.runtime.getURL(`_locales/${locale}/messages.json`));
+      const messages = await response.json();
+      localeCache[locale] = messages;
+      return messages;
+    } catch {
+      return {};
     }
-  };
+  }
 
   // Get user's language preference from storage
   // 从存储中获取用户的语言偏好
   async function getUserLanguage(): Promise<string> {
     try {
-      const result = await chrome.storage.local.get('UserSettings');
-      const settings = result.UserSettings || {};
+      const [localResult, syncResult] = await Promise.all([
+        chrome.storage.local.get('UserSettings'),
+        chrome.storage.sync.get('UserSettings').catch(() => ({ UserSettings: {} })),
+      ]);
+      const settings = {
+        ...(syncResult.UserSettings || {}),
+        ...(localResult.UserSettings || {}),
+      };
       const lang = settings.language || 'system';
       if (lang === 'system') {
         // Use browser language | 使用浏览器语言
@@ -51,9 +58,22 @@ export default defineBackground(() => {
 
   // Get localized message
   // 获取本地化消息
-  async function getMessage(key: string): Promise<string> {
+  async function getMessage(key: string, substitutions?: string | string[]): Promise<string> {
     const lang = await getUserLanguage();
-    return messages[lang]?.[key] || messages['en'][key] || key;
+    const messages = await loadLocaleMessages(lang);
+    const fallbackMessages = lang === 'en' ? {} : await loadLocaleMessages('en');
+    const entry = messages[key] || fallbackMessages[key];
+    if (!entry?.message) return key;
+
+    let message = entry.message;
+    if (substitutions) {
+      const values = Array.isArray(substitutions) ? substitutions : [substitutions];
+      values.forEach((value, index) => {
+        message = message.replace(`$${index + 1}`, value);
+      });
+    }
+
+    return message;
   }
 
   // Handle extension installation
@@ -67,7 +87,7 @@ export default defineBackground(() => {
   });
 
   // Handle auto backup alarm | 处理自动备份定时器
-  chrome.alarms.onAlarm.addListener(async (alarm) => {
+  const handleAutoBackupAlarm = async (alarm: chrome.alarms.Alarm) => {
     if (alarm.name === 'autoBackup') {
       console.log('[Auths Background] Auto backup alarm triggered');
 
@@ -96,21 +116,15 @@ export default defineBackground(() => {
         const remoteTimestamp = latestRemote?.timestamp || 0;
         const remoteFilename = latestRemote?.name || '';
 
-        // Log helper | 日志辅助函数
-        const addLog = async (level: string, operation: string, message: string, details: string) => {
-          const log = { timestamp: Date.now(), level, operation, message, details };
-          const logsResult = await chrome.storage.local.get(['webdavSyncLogs']);
-          const logs = logsResult.webdavSyncLogs || [];
-          logs.push(log);
-          while (logs.length > 100) logs.shift();
-          await chrome.storage.local.set({ webdavSyncLogs: logs });
-        };
-
         // Sync decision based on timestamps | 基于时间戳的同步决策
         if (remoteTimestamp > localTimestamp && remoteFilename) {
           // Remote is newer, download | 远程更新，下载
           console.log('[Auths Background] Remote is newer, downloading...');
-          await addLog('INFO', 'AUTO_BACKUP_TRIGGER', '检测到远程更新，正在下载', remoteFilename);
+          await addLocalizedSyncLog('INFO', 'AUTO_BACKUP_TRIGGER', {
+            messageKey: 'sync_downloading',
+            detailsKey: 'log_details_file',
+            detailsArgs: [remoteFilename]
+          });
 
           const backupData = await downloadWebDAVBackup(config.serverUrl, config.username, password, remoteFilename);
           const allAccounts = [...entries, ...backupData.accounts];
@@ -122,11 +136,18 @@ export default defineBackground(() => {
           const importCount = deduplicatedAccounts.length - entries.length;
 
           await chrome.storage.local.set({ entries: deduplicatedAccounts, entriesLastModified: Date.now(), lastSyncedTimestamp: Date.now() });
-          await addLog('INFO', 'BACKUP_SUCCESS', '自动同步成功（下载）', `新增 ${importCount} 个账户, 去重 ${removedDuplicates} 个`);
+          await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {
+            messageKey: 'log_auto_sync_download_success',
+            detailsKey: 'log_details_added_deduped',
+            detailsArgs: [String(importCount), String(removedDuplicates)]
+          });
         } else if (localTimestamp > remoteTimestamp) {
           // Local is newer, upload | 本地更新，上传
           console.log('[Auths Background] Local is newer, uploading...');
-          await addLog('INFO', 'AUTO_BACKUP_TRIGGER', '本地更新，正在上传', config.serverUrl);
+          await addLocalizedSyncLog('INFO', 'AUTO_BACKUP_TRIGGER', {
+            messageKey: 'sync_uploading',
+            detailsFallback: config.serverUrl
+          });
 
           // Deduplicate before upload | 上传前去重
           const { accounts: deduplicatedEntries } = dedupeAccountsBySecret(entries);
@@ -134,54 +155,76 @@ export default defineBackground(() => {
           // Update local if duplicates were removed | 如果有重复被移除则更新本地
           if (deduplicatedEntries.length < entries.length) {
             await chrome.storage.local.set({ entries: deduplicatedEntries, entriesLastModified: Date.now() });
-            await addLog('INFO', 'AUTO_BACKUP_TRIGGER', '上传前去重', `移除 ${entries.length - deduplicatedEntries.length} 个重复账户`);
+            await addLocalizedSyncLog('INFO', 'AUTO_BACKUP_TRIGGER', {
+              messageKey: 'log_pre_upload_dedupe',
+              detailsKey: 'log_details_removed_duplicates',
+              detailsArgs: [String(entries.length - deduplicatedEntries.length)]
+            });
           }
 
           const filename = await uploadWebDAVBackup(config.serverUrl, config.username, password, deduplicatedEntries);
           await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
-          await addLog('INFO', 'BACKUP_SUCCESS', '自动备份成功（上传）', `文件: ${filename}`);
+          await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {
+            messageKey: 'log_auto_backup_upload_success',
+            detailsKey: 'log_details_file',
+            detailsArgs: [filename]
+          });
 
         } else {
           // Already up to date | 已是最新
           console.log('[Auths Background] Already up to date');
-          await addLog('INFO', 'AUTO_BACKUP_TRIGGER', '自动备份跳过（已是最新）', '本地和远程数据一致');
+          await addLocalizedSyncLog('INFO', 'AUTO_BACKUP_TRIGGER', {
+            messageKey: 'log_auto_backup_skipped',
+            detailsKey: 'log_details_local_remote_up_to_date'
+          });
           await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
         }
 
         try {
           const cleanup = await cleanupExpiredWebDAVBackups(config.serverUrl, config.username, password, Number(config.retentionDays ?? 30));
           if (!cleanup.skipped && (cleanup.deleted.length > 0 || cleanup.failed.length > 0)) {
-            await addLog(
-              cleanup.failed.length > 0 ? 'WARN' : 'INFO',
-              'BACKUP_SUCCESS',
-              '备份保留策略已执行',
-              `删除 ${cleanup.deleted.length} 个过期备份, 失败 ${cleanup.failed.length} 个`
-            );
+            await addLocalizedSyncLog(cleanup.failed.length > 0 ? 'WARN' : 'INFO', 'BACKUP_SUCCESS', {
+              messageKey: 'retention_cleanup_done',
+              detailsKey: 'log_details_retention_cleanup',
+              detailsArgs: [String(cleanup.deleted.length), String(cleanup.failed.length)]
+            });
           }
         } catch (cleanupError) {
-          await addLog('WARN', 'BACKUP_SUCCESS', '备份成功，但保留策略执行失败', cleanupError instanceof Error ? cleanupError.message : '未知错误');
+          await addLocalizedSyncLog('WARN', 'BACKUP_SUCCESS', {
+            messageKey: 'retention_cleanup_failed',
+            detailsFallback: cleanupError instanceof Error ? cleanupError.message : 'Unknown error'
+          });
         }
 
         console.log('[Auths Background] Auto sync completed');
       } catch (error) {
         console.error('[Auths Background] Auto backup error:', error);
 
-        // Log error | 记录错误
-        const errorLog = {
-          timestamp: Date.now(),
-          level: 'ERROR',
-          operation: 'BACKUP_FAILED',
-          message: '自动备份失败',
-          details: error instanceof Error ? error.message : '未知错误'
-        };
-
-        const logs = (await chrome.storage.local.get(['webdavSyncLogs'])).webdavSyncLogs || [];
-        logs.push(errorLog);
-        while (logs.length > 100) logs.shift();
-        await chrome.storage.local.set({ webdavSyncLogs: logs });
+        await addLocalizedSyncLog('ERROR', 'BACKUP_FAILED', {
+          messageKey: 'log_auto_backup_failed',
+          detailsFallback: error instanceof Error ? error.message : 'Unknown error'
+        });
       }
     }
-  });
+  };
+
+  let autoBackupAlarmListenerRegistered = false;
+
+  function registerAutoBackupAlarmListener() {
+    if (autoBackupAlarmListenerRegistered || !chrome.alarms?.onAlarm) return;
+    chrome.alarms.onAlarm.addListener(handleAutoBackupAlarm);
+    autoBackupAlarmListenerRegistered = true;
+  }
+
+  registerAutoBackupAlarmListener();
+
+  if (chrome.permissions.onAdded) {
+    chrome.permissions.onAdded.addListener((perms) => {
+      if (perms.permissions?.includes('alarms')) {
+        registerAutoBackupAlarmListener();
+      }
+    });
+  }
 
   // Handle commands
   // 处理快捷键命令

@@ -148,7 +148,7 @@ export default function AddAccountForm({ onClose }: AddAccountFormProps) {
             }}
           >
             <span style={{ transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>▶</span>
-            {t('advanced_options') || 'Advanced Options'}
+            {t('advanced_options')}
           </button>
         </div>
 

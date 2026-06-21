@@ -2,8 +2,8 @@ export type ThemePreference = 'light' | 'dark' | 'system';
 export type EffectiveTheme = 'light' | 'dark';
 
 export function normalizeThemePreference(theme?: string | null): ThemePreference {
-  if (theme === 'dark' || theme === 'system') return theme;
-  return 'light';
+  if (theme === 'light' || theme === 'dark' || theme === 'system') return theme;
+  return 'system';
 }
 
 export function getSystemTheme(): EffectiveTheme {
