@@ -1,3 +1,5 @@
+import type { ThemePreference } from '@/utils/theme';
+
 /**
  * Menu Reducer | 菜单 Reducer
  *
@@ -9,7 +11,7 @@ export interface MenuState {
   version: string;
   zoom: number;
   smartFilter: boolean;
-  theme: string;
+  theme: ThemePreference;
   autolock: number;
   language: string;
 }
@@ -17,16 +19,16 @@ export interface MenuState {
 export type MenuAction =
   | { type: 'setZoom'; payload: number }
   | { type: 'setSmartFilter'; payload: boolean }
-  | { type: 'setTheme'; payload: string }
+  | { type: 'setTheme'; payload: ThemePreference }
   | { type: 'setAutolock'; payload: number }
   | { type: 'setVersion'; payload: string }
   | { type: 'setLanguage'; payload: string };
 
 const initialState: MenuState = {
-  version: '1.0.0',
+  version: '1.0.4',
   zoom: 100,
   smartFilter: true,
-  theme: 'normal',
+  theme: 'light',
   autolock: 0,
   language: 'system',
 };

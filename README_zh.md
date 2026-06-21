@@ -3,7 +3,7 @@
 [English](./README.md)
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.0.0-green.svg)](package.json)
+[![Version](https://img.shields.io/badge/Version-1.0.4-green.svg)](package.json)
 [![Build](https://img.shields.io/badge/Build-WXT-orange.svg)](https://wxt.dev)
 
 **Auths** 是一款安全且现代化的双重验证 (2FA / TOTP) 浏览器扩展。基于 React 和 WXT 框架构建，在提供整洁视觉体验的同时，确保数据的安全性。

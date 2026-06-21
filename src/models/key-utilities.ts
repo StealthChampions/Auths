@@ -18,8 +18,6 @@ import { OTPType, OTPAlgorithm, OTPUtil } from "./otp";
 import * as CryptoJS from "crypto-js";
 import {
   gostEngine as GostEngine,
-  GostDigest,
-  AlgorithmIndentifier,
 } from "node-gost-crypto";
 
 export class KeyUtilities {
@@ -187,8 +185,8 @@ export class KeyUtilities {
       }
     }
 
-    let alg: AlgorithmIndentifier;
-    let gostCipher: GostDigest;
+    let alg: any;
+    let gostCipher: any;
 
     let hmacObj: CryptoJS.lib.WordArray;
     switch (algorithm) {

@@ -1,3 +1,5 @@
+import { generateEntryHash } from '@/utils/accounts';
+
 /**
  * Accounts Reducer | 账户 Reducer
  *
@@ -139,7 +141,7 @@ export function accountsReducer(state = initialState, action: AccountsAction): A
       // 生成唯一 hash
       const newEntry = {
         ...action.payload,
-        hash: action.payload.hash || generateHash(),
+        hash: action.payload.hash || generateEntryHash(),
         pinned: false,
         code: '',
       };
@@ -249,11 +251,6 @@ export function accountsReducer(state = initialState, action: AccountsAction): A
     default:
       return state;
   }
-}
-
-// 生成唯一 hash | Generate unique hash
-function generateHash(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
 // 保存 entries 到 chrome.storage 并更新修改时间戳

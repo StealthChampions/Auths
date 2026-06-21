@@ -9,6 +9,9 @@ import React, { useState } from 'react';
 import { useI18n } from '@/i18n';
 import { useNotification, useAccounts } from '@/store';
 import { addSyncLog, getSyncLogs, clearSyncLogs, formatLogTime, type SyncLogEntry } from '@/utils/sync-logger';
+import { dedupeAccountsBySecret } from '@/utils/accounts';
+import { decryptWebDAVPassword, migratePlainWebDAVConfig, withEncryptedWebDAVPassword } from '@/utils/webdav-credentials';
+import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, listWebDAVBackups, uploadWebDAVBackup } from '@/utils/webdav-sync';
 import '@/assets/styles/components.css';
 
 interface WebDAVProps {
@@ -77,6 +80,26 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         }
     };
 
+    const applyRetentionPolicy = async () => {
+        let cleanup;
+        try {
+            cleanup = await cleanupExpiredWebDAVBackups(serverUrl, username, password, retentionDays);
+        } catch (error) {
+            await addSyncLog('WARN', 'BACKUP_SUCCESS', t('retention_cleanup_failed'), error instanceof Error ? error.message : t('unknown_error'));
+            return;
+        }
+
+        if (cleanup.skipped) return;
+        if (cleanup.deleted.length > 0 || cleanup.failed.length > 0) {
+            await addSyncLog(
+                cleanup.failed.length > 0 ? 'WARN' : 'INFO',
+                'BACKUP_SUCCESS',
+                t('retention_cleanup_done'),
+                `删除 ${cleanup.deleted.length} 个过期备份, 失败 ${cleanup.failed.length} 个`
+            );
+        }
+    };
+
     // List backups from WebDAV server using PROPFIND | 使用 PROPFIND 列出 WebDAV 服务器上的备份
     const listBackups = async () => {
         if (!serverUrl || !username || !password) {
@@ -93,48 +116,11 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         setRestoreLoading(true);
 
         try {
-            const response = await fetch(serverUrl, {
-                method: 'PROPFIND',
-                headers: {
-                    'Authorization': 'Basic ' + btoa(`${username}:${password}`),
-                    'Depth': '1',
-                    'Content-Type': 'application/xml'
-                },
-                body: `<?xml version="1.0" encoding="utf-8" ?>
-                    <D:propfind xmlns:D="DAV:">
-                        <D:prop>
-                            <D:displayname/>
-                            <D:getlastmodified/>
-                        </D:prop>
-                    </D:propfind>`
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            const text = await response.text();
-            const parser = new DOMParser();
-            const xml = parser.parseFromString(text, 'text/xml');
-            const responses = xml.getElementsByTagNameNS('DAV:', 'response');
-
-            const files: Array<{ name: string, date: string }> = [];
-            for (let i = 0; i < responses.length; i++) {
-                const href = responses[i].getElementsByTagNameNS('DAV:', 'href')[0]?.textContent || '';
-                const lastModified = responses[i].getElementsByTagNameNS('DAV:', 'getlastmodified')[0]?.textContent || '';
-
-                // Filter for auths backup files | 筛选 auths 备份文件
-                if (href.includes('auths-backup') && href.endsWith('.json')) {
-                    const name = decodeURIComponent(href.split('/').pop() || '');
-                    files.push({
-                        name,
-                        date: lastModified ? new Date(lastModified).toLocaleString() : 'Unknown'
-                    });
-                }
-            }
-
-            // Sort by name (date in filename) descending | 按文件名（包含日期）降序排序
-            files.sort((a, b) => b.name.localeCompare(a.name));
+            await applyRetentionPolicy();
+            const files = (await listWebDAVBackups(serverUrl, username, password)).sort((a, b) => b.timestamp - a.timestamp).map((file) => ({
+                name: file.name,
+                date: file.timestamp ? new Date(file.timestamp).toLocaleString() : 'Unknown',
+            }));
 
             setBackupFiles(files);
             setShowRestoreList(true);
@@ -166,26 +152,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         await addSyncLog('INFO', 'RESTORE_START', t('log_restore_start'), filename);
 
         try {
-            const downloadUrl = serverUrl.endsWith('/')
-                ? `${serverUrl}${filename}`
-                : `${serverUrl}/${filename}`;
-
-            const response = await fetch(downloadUrl, {
-                method: 'GET',
-                headers: {
-                    'Authorization': 'Basic ' + btoa(`${username}:${password}`)
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            const backupData = await response.json();
-
-            if (!backupData.accounts || !Array.isArray(backupData.accounts)) {
-                throw new Error(t('format_error'));
-            }
+            const backupData = await downloadWebDAVBackup(serverUrl, username, password, filename);
 
             // Merge with existing accounts | 与现有账户合并
             const result = await chrome.storage.local.get(['entries']);
@@ -196,30 +163,14 @@ export default function WebDAV({ onClose }: WebDAVProps) {
 
             // Then deduplicate by secret (consistent with performDownload and background.ts)
             // 基于 secret 去重（与 performDownload 和 background.ts 保持一致）
-            const normalizeSecret = (s: string) => s ? s.toUpperCase().replace(/\s/g, '') : '';
-            const seenSecrets = new Set<string>();
-            const seenHashes = new Set<string>();
-            const generateHash = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
-
-            const deduplicatedAccounts = allAccounts.filter((account: any) => {
-                const normalizedSecret = normalizeSecret(account.secret);
-                // Skip if secret already seen | 如果 secret 已见过，跳过
-                if (normalizedSecret && seenSecrets.has(normalizedSecret)) {
-                    return false;
-                }
-                // Ensure unique hash | 确保 hash 唯一
-                if (!account.hash || seenHashes.has(account.hash)) {
-                    account.hash = generateHash();
-                }
-                if (normalizedSecret) seenSecrets.add(normalizedSecret);
-                seenHashes.add(account.hash);
-                return true;
-            });
+            const {
+                accounts: deduplicatedAccounts,
+                removedDuplicates,
+            } = dedupeAccountsBySecret(allAccounts, { duplicatePreference: 'last' });
 
             const importCount = deduplicatedAccounts.length - existingAccounts.length;
-            const removedDuplicates = allAccounts.length - deduplicatedAccounts.length;
 
-            await chrome.storage.local.set({ entries: deduplicatedAccounts });
+            await chrome.storage.local.set({ entries: deduplicatedAccounts, entriesLastModified: Date.now() });
 
             // Update global state immediately | 立即更新全局状态
             accountsDispatch({ type: 'setEntries', payload: deduplicatedAccounts });
@@ -254,14 +205,13 @@ export default function WebDAV({ onClose }: WebDAVProps) {
 
         // Save form data BEFORE requesting permission to prevent data loss
         // 在请求权限之前保存表单数据，防止数据丢失
-        const tempConfig = {
+        const tempConfig = await withEncryptedWebDAVPassword({
             serverUrl,
             username,
-            password,
             autoBackup,
             backupInterval: parseInt(backupInterval),
             retentionDays
-        };
+        }, password);
         await chrome.storage.local.set({ webdavConfig: tempConfig });
 
         // Request permission for WebDAV server | 请求 WebDAV 服务器访问权限
@@ -270,15 +220,14 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             return;
         }
 
-        const config = {
+        const config = await withEncryptedWebDAVPassword({
             serverUrl,
             username,
-            password, // Store password directly (no encryption without master password) | 直接存储密码（无主密码时不加密）
             autoBackup,
             backupInterval: parseInt(backupInterval),
             retentionDays,
             syncOnStartup
-        };
+        }, password);
 
         // Save config to storage | 保存配置到存储
         await chrome.storage.local.set({ webdavConfig: config });
@@ -303,6 +252,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         }
 
         await addSyncLog('INFO', 'CONFIG_SAVED', t('log_config_saved'), `自动备份: ${autoBackup ? '开启' : '关闭'}`);
+        await applyRetentionPolicy();
         showToast('success', t('config_saved'));
         await refreshLogs();
     };
@@ -335,60 +285,24 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             }
 
             // Deduplicate before upload | 上传前去重
-            const normalizeSecret = (s: string) => s ? s.toUpperCase().replace(/\s/g, '') : '';
-            const seenSecrets = new Set<string>();
-            const deduplicatedEntries = entries.filter((acc: any) => {
-                const normalized = normalizeSecret(acc.secret);
-                if (normalized && seenSecrets.has(normalized)) return false;
-                if (normalized) seenSecrets.add(normalized);
-                return true;
-            });
+            const {
+                accounts: deduplicatedEntries,
+                removedDuplicates,
+            } = dedupeAccountsBySecret(entries);
 
             // Update local if duplicates were removed | 如果有重复被移除则更新本地
-            if (deduplicatedEntries.length < entries.length) {
+            if (removedDuplicates > 0) {
                 await chrome.storage.local.set({ entries: deduplicatedEntries, entriesLastModified: Date.now() });
                 accountsDispatch({ type: 'setEntries', payload: deduplicatedEntries });
-                await addSyncLog('INFO', 'BACKUP_START', '上传前去重', `移除 ${entries.length - deduplicatedEntries.length} 个重复账户`);
+                await addSyncLog('INFO', 'BACKUP_START', '上传前去重', `移除 ${removedDuplicates} 个重复账户`);
                 entries = deduplicatedEntries;
             }
 
-            // Create backup data | 创建备份数据
-            const backupData = {
-                version: '1.0',
-                timestamp: Date.now(),
-                accounts: entries
-            };
+            const filename = await uploadWebDAVBackup(serverUrl, username, password, entries);
+            await applyRetentionPolicy();
 
-            const now = new Date().toISOString().slice(0, 10);
-            const filename = `auths-backup-${now}.json`;
-            const uploadUrl = serverUrl.endsWith('/')
-                ? `${serverUrl}${filename}`
-                : `${serverUrl}/${filename}`;
-
-            // Upload to WebDAV | 上传到 WebDAV（使用当前状态中的明文密码）
-            const response = await fetch(uploadUrl, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': 'Basic ' + btoa(`${username}:${password}`),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(backupData, null, 2)
-            });
-
-            if (response.ok || response.status === 201 || response.status === 204) {
-                await addSyncLog('INFO', 'BACKUP_SUCCESS', t('log_backup_success'), `文件: ${filename}`);
-                showToast('success', t('backup_success'));
-            } else {
-                if (response.status === 401) {
-                    throw new Error(t('auth_failed'));
-                } else if (response.status === 404) {
-                    throw new Error(t('path_error'));
-                } else if (response.status === 409) {
-                    throw new Error(t('conflict_error'));
-                } else {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-            }
+            await addSyncLog('INFO', 'BACKUP_SUCCESS', t('log_backup_success'), `文件: ${filename}`);
+            showToast('success', t('backup_success'));
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : t('unknown_error');
             await addSyncLog('ERROR', 'BACKUP_FAILED', t('log_backup_failed'), errorMsg);
@@ -421,46 +335,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             const localTimestamp = localResult.entriesLastModified || 0;
 
             // 2. Get remote latest backup file info | 获取远程最新备份文件信息
-            const propfindResponse = await fetch(serverUrl, {
-                method: 'PROPFIND',
-                headers: {
-                    'Authorization': 'Basic ' + btoa(`${username}:${password}`),
-                    'Depth': '1',
-                    'Content-Type': 'application/xml'
-                },
-                body: `<?xml version="1.0" encoding="utf-8" ?>
-                    <D:propfind xmlns:D="DAV:">
-                        <D:prop>
-                            <D:displayname/>
-                            <D:getlastmodified/>
-                        </D:prop>
-                    </D:propfind>`
-            });
-
-            if (!propfindResponse.ok) {
-                throw new Error(`HTTP ${propfindResponse.status}`);
-            }
-
-            const text = await propfindResponse.text();
-            const parser = new DOMParser();
-            const xml = parser.parseFromString(text, 'text/xml');
-            const responses = xml.getElementsByTagNameNS('DAV:', 'response');
-
-            // Find latest backup file | 找到最新的备份文件
-            let latestRemoteFile: { name: string; timestamp: number } | null = null;
-            for (let i = 0; i < responses.length; i++) {
-                const href = responses[i].getElementsByTagNameNS('DAV:', 'href')[0]?.textContent || '';
-                const lastModified = responses[i].getElementsByTagNameNS('DAV:', 'getlastmodified')[0]?.textContent || '';
-
-                if (href.includes('auths-backup') && href.endsWith('.json')) {
-                    const name = decodeURIComponent(href.split('/').pop() || '');
-                    const timestamp = lastModified ? new Date(lastModified).getTime() : 0;
-
-                    if (!latestRemoteFile || timestamp > latestRemoteFile.timestamp) {
-                        latestRemoteFile = { name, timestamp };
-                    }
-                }
-            }
+            const latestRemoteFile = await getLatestWebDAVBackup(serverUrl, username, password);
 
             // 3. Compare and sync | 对比并同步
             if (!latestRemoteFile) {
@@ -488,6 +363,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                 showToast('success', t('sync_up_to_date'));
             }
 
+            await applyRetentionPolicy();
             await addSyncLog('INFO', 'BACKUP_SUCCESS', t('sync_complete'));
             // Record last sync timestamp | 记录上次同步时间
             await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
@@ -502,56 +378,15 @@ export default function WebDAV({ onClose }: WebDAVProps) {
 
     // Helper: perform upload | 辅助函数：执行上传
     const performUpload = async (entries: any[]) => {
-        const backupData = {
-            version: '1.0',
-            timestamp: Date.now(),
-            accounts: entries
-        };
-
-        const now = new Date().toISOString().slice(0, 10);
-        const filename = `auths-backup-${now}.json`;
-        const uploadUrl = serverUrl.endsWith('/')
-            ? `${serverUrl}${filename}`
-            : `${serverUrl}/${filename}`;
-
-        const response = await fetch(uploadUrl, {
-            method: 'PUT',
-            headers: {
-                'Authorization': 'Basic ' + btoa(`${username}:${password}`),
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(backupData, null, 2)
-        });
-
-        if (!response.ok && response.status !== 201 && response.status !== 204) {
-            throw new Error(`Upload failed: HTTP ${response.status}`);
-        }
-
+        await uploadWebDAVBackup(serverUrl, username, password, entries);
+        await applyRetentionPolicy();
         // Update local timestamp | 更新本地时间戳
         await chrome.storage.local.set({ entriesLastModified: Date.now() });
     };
 
     // Helper: perform download and merge | 辅助函数：执行下载并合并
     const performDownload = async (filename: string) => {
-        const downloadUrl = serverUrl.endsWith('/')
-            ? `${serverUrl}${filename}`
-            : `${serverUrl}/${filename}`;
-
-        const response = await fetch(downloadUrl, {
-            method: 'GET',
-            headers: {
-                'Authorization': 'Basic ' + btoa(`${username}:${password}`)
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Download failed: HTTP ${response.status}`);
-        }
-
-        const backupData = await response.json();
-        if (!backupData.accounts || !Array.isArray(backupData.accounts)) {
-            throw new Error('Invalid backup format');
-        }
+        const backupData = await downloadWebDAVBackup(serverUrl, username, password, filename);
 
         // Merge accounts | 合并账户
         const localResult = await chrome.storage.local.get(['entries']);
@@ -561,28 +396,12 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         const allAccounts = [...existingAccounts, ...backupData.accounts];
 
         // Then deduplicate | 然后去重
-        const normalizeSecret = (s: string) => s ? s.toUpperCase().replace(/\s/g, '') : '';
-        const seenSecrets = new Set<string>();
-        const seenHashes = new Set<string>();
-        const generateHash = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
-
-        const deduplicatedAccounts = allAccounts.filter((account: any) => {
-            const normalizedSecret = normalizeSecret(account.secret);
-            // Skip if secret already seen | 如果 secret 已见过，跳过
-            if (normalizedSecret && seenSecrets.has(normalizedSecret)) {
-                return false;
-            }
-            // Ensure unique hash | 确保 hash 唯一
-            if (!account.hash || seenHashes.has(account.hash)) {
-                account.hash = generateHash();
-            }
-            if (normalizedSecret) seenSecrets.add(normalizedSecret);
-            seenHashes.add(account.hash);
-            return true;
-        });
+        const {
+            accounts: deduplicatedAccounts,
+            removedDuplicates,
+        } = dedupeAccountsBySecret(allAccounts, { duplicatePreference: 'last' });
 
         const importCount = deduplicatedAccounts.length - existingAccounts.length;
-        const removedDuplicates = allAccounts.length - deduplicatedAccounts.length;
 
         await chrome.storage.local.set({
             entries: deduplicatedAccounts,
@@ -598,14 +417,15 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         const loadConfig = async () => {
             const result = await chrome.storage.local.get(['webdavConfig']);
             if (result.webdavConfig) {
-                setServerUrl(result.webdavConfig.serverUrl || '');
-                setUsername(result.webdavConfig.username || '');
-                // Load password directly | 直接加载密码
-                setPassword(result.webdavConfig.password || '');
-                setAutoBackup(result.webdavConfig.autoBackup || false);
-                setBackupInterval(result.webdavConfig.backupInterval?.toString() || '1440');
-                setRetentionDays(result.webdavConfig.retentionDays || 30);
-                setSyncOnStartup(result.webdavConfig.syncOnStartup || false);
+                const config = await migratePlainWebDAVConfig(result.webdavConfig);
+                const decryptedPassword = await decryptWebDAVPassword(config);
+                setServerUrl(config?.serverUrl || '');
+                setUsername(config?.username || '');
+                setPassword(decryptedPassword);
+                setAutoBackup(Boolean(config?.autoBackup));
+                setBackupInterval(config?.backupInterval?.toString() || '1440');
+                setRetentionDays(Number(config?.retentionDays || 30));
+                setSyncOnStartup(Boolean(config?.syncOnStartup));
             }
         };
         loadConfig();

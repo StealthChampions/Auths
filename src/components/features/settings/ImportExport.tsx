@@ -9,6 +9,8 @@ import React, { useState, useEffect } from 'react';
 import { useBackup, useNotification, useAccounts } from '@/store';
 import { useI18n } from '@/i18n';
 import { SecureHash } from '@/models/encryption';
+import { dedupeAccountsBySecret } from '@/utils/accounts';
+import { formatLocalDate } from '@/utils/date';
 
 interface ImportExportProps {
   onClose: () => void;
@@ -81,7 +83,7 @@ export default function ImportExport({ onClose }: ImportExportProps) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `auths-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      link.download = `auths-backup-${formatLocalDate()}.json`;
       link.click();
       URL.revokeObjectURL(url);
 
@@ -140,18 +142,13 @@ export default function ImportExport({ onClose }: ImportExportProps) {
       // Merge with existing accounts
       const result = await chrome.storage.local.get(['entries']);
       const existingAccounts = result.entries || [];
-      const mergedAccounts = [...existingAccounts];
+      const { accounts: mergedAccounts } = dedupeAccountsBySecret(
+        [...existingAccounts, ...accounts],
+        { duplicatePreference: 'last' }
+      );
+      const importCount = Math.max(mergedAccounts.length - existingAccounts.length, 0);
 
-      let importCount = 0;
-      for (const account of accounts) {
-        const exists = mergedAccounts.find(a => a.hash === account.hash);
-        if (!exists) {
-          mergedAccounts.push(account);
-          importCount++;
-        }
-      }
-
-      await chrome.storage.local.set({ entries: mergedAccounts });
+      await chrome.storage.local.set({ entries: mergedAccounts, entriesLastModified: Date.now() });
 
       // Update global state immediately | 立即更新全局状态
       accountsDispatch({ type: 'setEntries', payload: mergedAccounts });
