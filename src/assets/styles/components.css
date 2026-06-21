@@ -572,15 +572,90 @@
 }
 
 .backup-setting-row {
-  min-height: 48px;
+  min-height: 46px;
+}
+
+.backup-setting-row .settings-inline-action {
+  justify-content: stretch;
+  width: 88px;
+  min-width: 88px;
 }
 
 .backup-setting-row .settings-inline-action .btn-secondary,
 .backup-setting-row .settings-inline-action .btn-danger {
-  max-width: 136px;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: 32px;
+  padding: 0 10px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.settings-section-compact {
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.settings-section-compact h3 {
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+}
+
+.settings-section-compact .setting-item {
+  padding: 6px 0;
+}
+
+.settings-section-compact .setting-item.setting-row {
+  min-height: 40px;
+  gap: 12px;
+}
+
+.settings-section-compact .backup-setting-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px;
+  align-items: center;
+  column-gap: 12px;
+}
+
+.setting-item.setting-row .setting-copy {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+}
+
+.setting-item.setting-row .setting-label-row {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  line-height: 1;
+}
+
+.setting-item.setting-row label,
+.setting-item.setting-row .setting-label-text {
+  line-height: 32px;
+}
+
+.setting-item.setting-row .setting-hint {
+  align-self: center;
+}
+
+.settings-section-compact .backup-setting-row .settings-inline-action .btn-secondary,
+.settings-section-compact .backup-setting-row .settings-inline-action .btn-danger {
+  min-width: 0;
+  padding: 0 10px;
+}
+
+@media (max-width: 340px) {
+  .settings-section-compact .backup-setting-row {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-section-compact .backup-setting-row .settings-inline-action {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .danger-setting-row .setting-label-text {
@@ -1147,8 +1222,10 @@
 }
 
 .info-item {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 12px;
   margin-bottom: 8px;
   font-size: 14px;
 }
@@ -1159,11 +1236,15 @@
 
 .info-label {
   color: var(--color-text-secondary);
+  min-width: 0;
 }
 
 .info-value {
   font-weight: 600;
   color: var(--color-text-primary);
+  min-width: 0;
+  text-align: left;
+  overflow-wrap: anywhere;
 }
 
 .file-input-wrapper {
