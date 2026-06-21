@@ -14,6 +14,7 @@ import { syncTimeWithGoogle } from '@/models/syncTime';
 import { useI18n } from '@/i18n';
 import { UserSettings } from '@/models/settings';
 import { applyThemePreference, normalizeThemePreference, type ThemePreference } from '@/utils/theme';
+import { clearWebDAVConfig } from '@/utils/webdav-credentials';
 import ImportExport from './ImportExport';
 import WebDAV from './WebDAV';
 
@@ -123,7 +124,10 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   const handleClearAllData = async () => {
     try {
       // Clear all entries from storage | 清除存储中的所有条目
-      await chrome.storage.local.remove(['entries', 'webdavConfig']);
+      await Promise.all([
+        chrome.storage.local.remove(['entries']),
+        clearWebDAVConfig(),
+      ]);
       // Update global state | 更新全局状态
       accountsDispatch({ type: 'setEntries', payload: [] });
       // Close confirm dialog | 关闭确认对话框
@@ -153,6 +157,12 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   const handleSmartFilterChange = (enabled: boolean) => {
     dispatch({ type: 'setSmartFilter', payload: enabled });
     UserSettings.items.smartFilter = enabled;
+    UserSettings.commitItems();
+  };
+
+  const handleClipboardClearChange = (seconds: number) => {
+    dispatch({ type: 'setClipboardClearSeconds', payload: seconds });
+    UserSettings.items.clipboardClearSeconds = seconds;
     UserSettings.commitItems();
   };
 
@@ -222,15 +232,17 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                     description={t('theme_description')}
                   />
                 </div>
-                <select
-                  id="themePreference"
-                  value={normalizeThemePreference(menu.theme)}
-                  onChange={(e) => handleThemeChange(normalizeThemePreference(e.target.value))}
-                >
-                  <option value="system">{t('follow_system')}</option>
-                  <option value="light">{t('theme_light')}</option>
-                  <option value="dark">{t('theme_dark')}</option>
-                </select>
+                <span className="select-control">
+                  <select
+                    id="themePreference"
+                    value={normalizeThemePreference(menu.theme)}
+                    onChange={(e) => handleThemeChange(normalizeThemePreference(e.target.value))}
+                  >
+                    <option value="system">{t('follow_system')}</option>
+                    <option value="light">{t('theme_light')}</option>
+                    <option value="dark">{t('theme_dark')}</option>
+                  </select>
+                </span>
               </div>
 
               <div className="setting-item setting-row">
@@ -241,15 +253,17 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                     description={t('language_description')}
                   />
                 </div>
-                <select
-                  id="languagePreference"
-                  value={menu.language || 'system'}
-                  onChange={(e) => handleLanguageChange(e.target.value)}
-                >
-                  <option value="system">{t('follow_system')}</option>
-                  <option value="en">{t('lang_english')}</option>
-                  <option value="zh_CN">{t('lang_chinese')}</option>
-                </select>
+                <span className="select-control">
+                  <select
+                    id="languagePreference"
+                    value={menu.language || 'system'}
+                    onChange={(e) => handleLanguageChange(e.target.value)}
+                  >
+                    <option value="system">{t('follow_system')}</option>
+                    <option value="en">{t('lang_english')}</option>
+                    <option value="zh_CN">{t('lang_chinese')}</option>
+                  </select>
+                </span>
               </div>
 
               <div className="setting-item setting-row">
@@ -306,6 +320,28 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                   checked={siteBadgeEnabled}
                   onChange={(e) => handleSiteBadgeToggle(e.target.checked)}
                 />
+              </div>
+
+              <div className="setting-item setting-row">
+                <div className="setting-copy">
+                  <SettingLabel
+                    htmlFor="clipboardClearSeconds"
+                    label={t('clipboard_auto_clear')}
+                    description={t('clipboard_auto_clear_description')}
+                  />
+                </div>
+                <span className="select-control">
+                  <select
+                    id="clipboardClearSeconds"
+                    value={menu.clipboardClearSeconds ?? 0}
+                    onChange={(e) => handleClipboardClearChange(Number(e.target.value))}
+                  >
+                    <option value={0}>{t('disabled')}</option>
+                    <option value={15}>{t('clipboard_clear_15s')}</option>
+                    <option value={30}>{t('clipboard_clear_30s')}</option>
+                    <option value={60}>{t('clipboard_clear_60s')}</option>
+                  </select>
+                </span>
               </div>
             </div>
           </>

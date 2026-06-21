@@ -23,7 +23,7 @@ Auths does not:
 - Collect or transmit personal information
 - Track your browsing activity
 - Use analytics or telemetry services
-- Store data on external servers
+- Store data on our own external servers
 - Share any information with third parties
 
 **中文：**
@@ -33,7 +33,7 @@ Auths 不会：
 - 收集或传输个人信息
 - 跟踪您的浏览活动
 - 使用分析或遥测服务
-- 在外部服务器上存储数据
+- 在我们自己的外部服务器上存储数据
 - 与第三方共享任何信息
 
 ---
@@ -41,22 +41,22 @@ Auths 不会：
 ## Data Storage | 数据存储
 
 **English:**
-All your data is stored **locally** on your device:
+Sensitive data is stored **locally** on your device:
 
 - **Account secrets**: Stored securely in your browser's local storage
-- **Settings and preferences**: Stored in your browser's local storage
-- **WebDAV configuration**: Stored locally when you enable WebDAV. The WebDAV password is encrypted before being stored locally, and the encryption key remains in your browser.
+- **Settings and preferences**: Stored in your browser's local storage, or in browser sync storage if you choose the extension's sync storage option
+- **WebDAV configuration**: Non-sensitive WebDAV setup fields such as server URL, username, auto-backup status, backup frequency, retention policy, and startup sync preference may be stored in browser sync storage so setup can follow your browser account. The WebDAV password is encrypted before being stored locally, is not stored in browser sync storage, and the encryption key remains in your browser.
 - **WebDAV device ID and device name**: A random per-install device ID and an editable local device name are stored locally. New WebDAV backups include both in backup metadata, and include the device ID plus a sanitized device-name slug in the backup filename so backups can be identified while retention cleanup stays scoped to the current browser profile.
-- **No cloud storage by default**: Your data never leaves your device unless you explicitly enable optional backup features
+- **No account cloud storage by default**: Account secrets never leave your device unless you explicitly enable optional backup features
 
 **中文：**
-所有数据都**本地**存储在您的设备上：
+敏感数据会**本地**存储在您的设备上：
 
 - **账户密钥**：安全存储在浏览器的本地存储中
-- **设置和偏好**：存储在浏览器的本地存储中
-- **WebDAV 配置**：仅在您启用 WebDAV 时本地保存。WebDAV 密码会先加密再保存到本地，加密密钥保留在您的浏览器中。
+- **设置和偏好**：存储在浏览器的本地存储中；如果您选择扩展的同步存储选项，部分偏好会存储在浏览器同步存储中
+- **WebDAV 配置**：WebDAV 服务器地址、用户名、自动备份状态、备份频率、保留策略、启动同步偏好等非敏感配置可能会存储在浏览器同步存储中，以便配置跟随您的浏览器账号。WebDAV 密码会先加密再保存在本地，不会存储到浏览器同步存储中，加密密钥保留在您的浏览器中。
 - **WebDAV 设备 ID 和设备名称**：随机生成的每安装实例设备 ID 与可编辑的本地设备名称会保存在本地。新 WebDAV 备份会在备份元数据中包含这两项，并在备份文件名中包含设备 ID 与经过安全处理的设备名称片段，以便识别备份来源，同时保留策略仍只清理当前浏览器配置生成的备份。
-- **默认无云存储**：除非您明确启用可选备份功能，否则数据永远不会离开您的设备
+- **账户数据默认无云存储**：除非您明确启用可选备份功能，否则账户密钥不会离开您的设备
 
 ---
 
@@ -188,7 +188,7 @@ If you have any questions about this Privacy Policy, please:
 ## Summary | 总结
 
 **English:**
-Auths stores all data locally. We collect nothing. Your privacy is fully protected.
+Auths stores sensitive data locally, collects nothing, and does not operate any backend server for your data.
 
 **中文：**
-Auths 将所有数据存储在本地。我们不收集任何信息。您的隐私受到完全保护。
+Auths 会将敏感数据保存在本地，不收集任何信息，也不会为您的数据运营后端服务器。

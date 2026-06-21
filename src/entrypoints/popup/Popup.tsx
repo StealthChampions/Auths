@@ -13,7 +13,7 @@ import { useStyle, useMenu, useNotification, useAccounts } from '@/store';
 import { UserSettings } from '@/models/settings';
 import { addLocalizedSyncLog } from '@/utils/sync-logger';
 import { dedupeAccountsBySecret } from '@/utils/accounts';
-import { decryptWebDAVPassword, migratePlainWebDAVConfig } from '@/utils/webdav-credentials';
+import { decryptWebDAVPassword, loadWebDAVConfig } from '@/utils/webdav-credentials';
 import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, uploadWebDAVBackup } from '@/utils/webdav-sync';
 import { applyThemePreference, normalizeThemePreference, resolveThemePreference } from '@/utils/theme';
 import { debugError, debugLog } from '@/utils/logger';
@@ -103,10 +103,19 @@ export default function Popup() {
         menuDispatch({ type: 'setSmartFilter', payload: UserSettings.items.smartFilter });
       }
 
+      // Clipboard auto-clear | 剪贴板自动清理
+      if (UserSettings.items.clipboardClearSeconds === undefined) {
+        UserSettings.items.clipboardClearSeconds = 0;
+        UserSettings.commitItems();
+      }
+      menuDispatch({
+        type: 'setClipboardClearSeconds',
+        payload: Number(UserSettings.items.clipboardClearSeconds ?? 0),
+      });
+
       // Sync on startup | 启动时自动同步
       try {
-        const configResult = await chrome.storage.local.get(['webdavConfig']);
-        const config = await migratePlainWebDAVConfig(configResult.webdavConfig);
+        const config = await loadWebDAVConfig();
         const password = await decryptWebDAVPassword(config);
         if (config?.syncOnStartup && config?.serverUrl && config?.username && password) {
           debugLog('[Auths] Startup sync enabled, performing auto sync...');

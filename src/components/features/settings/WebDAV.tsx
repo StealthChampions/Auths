@@ -10,12 +10,44 @@ import { useI18n } from '@/i18n';
 import { useNotification, useAccounts } from '@/store';
 import { addLocalizedSyncLog, getLocalizedSyncLogText, getSyncLogs, clearSyncLogs, formatLogTime, type SyncLogEntry } from '@/utils/sync-logger';
 import { dedupeAccountsBySecret } from '@/utils/accounts';
-import { decryptWebDAVPassword, migratePlainWebDAVConfig, withEncryptedWebDAVPassword } from '@/utils/webdav-credentials';
-import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, getWebDAVDeviceName, listWebDAVBackups, setWebDAVDeviceName, uploadWebDAVBackup } from '@/utils/webdav-sync';
+import { buildBackupMergePreview, normalizeBackupAccounts, type BackupMergePreview } from '@/utils/backup-preview';
+import { decryptWebDAVPassword, loadWebDAVConfig, saveLocalWebDAVConfigDraft, saveWebDAVConfig } from '@/utils/webdav-credentials';
+import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, getWebDAVDeviceId, getWebDAVDeviceName, listWebDAVBackups, setWebDAVDeviceName, uploadWebDAVBackup, type WebDAVBackupFile } from '@/utils/webdav-sync';
 
 interface WebDAVProps {
     onClose: () => void;
 }
+
+interface BackupHistoryItem extends WebDAVBackupFile {
+    date: string;
+    displayDeviceName: string;
+    accountCount?: number;
+    backupTimestamp?: number;
+}
+
+interface DeviceHistoryItem {
+    id: string;
+    name: string;
+    backupCount: number;
+    lastBackup: string;
+    isCurrent: boolean;
+}
+
+interface RestorePreviewState {
+    file: BackupHistoryItem;
+    accounts: OTPEntryInterface[];
+    summary: BackupMergePreview;
+}
+
+interface SyncConflictState {
+    remoteFileName: string;
+    remoteDate: string;
+    remoteAccounts: OTPEntryInterface[];
+    localAccounts: OTPEntryInterface[];
+    summary: BackupMergePreview;
+}
+
+type SyncConflictResolution = 'merge' | 'local' | 'remote';
 
 const GlobeIcon = () => (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -107,18 +139,22 @@ export default function WebDAV({ onClose }: WebDAVProps) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [deviceName, setDeviceName] = useState('');
+    const [currentDeviceId, setCurrentDeviceId] = useState('');
     const [loading, setLoading] = useState(false);
     const [autoBackup, setAutoBackup] = useState(false);
     const [backupInterval, setBackupInterval] = useState('1440'); // Default 24 hours | 默认 24 小时
     const [retentionDays, setRetentionDays] = useState(30); // Default 30 days | 默认 30 天
     const [showRestoreList, setShowRestoreList] = useState(false);
-    const [backupFiles, setBackupFiles] = useState<Array<{ name: string, date: string, deviceName: string }>>([]);
+    const [backupFiles, setBackupFiles] = useState<BackupHistoryItem[]>([]);
+    const [deviceHistory, setDeviceHistory] = useState<DeviceHistoryItem[]>([]);
+    const [restorePreview, setRestorePreview] = useState<RestorePreviewState | null>(null);
     const [restoreLoading, setRestoreLoading] = useState(false);
     // Log related state | 日志相关状态
     const [showLogs, setShowLogs] = useState(false);
     const [syncLogs, setSyncLogs] = useState<SyncLogEntry[]>([]);
     // Sync state | 同步状态
     const [syncing, setSyncing] = useState(false);
+    const [syncConflict, setSyncConflict] = useState<SyncConflictState | null>(null);
     // Sync on startup toggle | 启动时同步开关
     const [syncOnStartup, setSyncOnStartup] = useState(false);
 
@@ -132,6 +168,61 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         if (showLogs) {
             const logs = await getSyncLogs();
             setSyncLogs(logs);
+        }
+    };
+
+    const formatBackupDate = (timestamp?: number) => {
+        return timestamp ? new Date(timestamp).toLocaleString() : t('unknown_time');
+    };
+
+    const getDisplayDeviceName = (file: WebDAVBackupFile, backupDeviceName?: string) => {
+        if (file.legacy) return t('legacy_backup');
+        if (backupDeviceName) return backupDeviceName;
+        if (file.deviceName) return file.deviceName.replace(/-/g, ' ');
+        return t('device_id_label', [file.deviceId || t('unknown_device')]);
+    };
+
+    const buildDeviceHistory = (files: BackupHistoryItem[], activeDeviceId = currentDeviceId) => {
+        const devices = new Map<string, DeviceHistoryItem & { lastTimestamp: number }>();
+
+        for (const file of files) {
+            const id = file.legacy ? 'legacy' : (file.deviceId || file.displayDeviceName);
+            const timestamp = file.backupTimestamp || file.timestamp || 0;
+            const existing = devices.get(id);
+
+            if (!existing) {
+                devices.set(id, {
+                    id,
+                    name: file.displayDeviceName,
+                    backupCount: 1,
+                    lastBackup: formatBackupDate(timestamp),
+                    isCurrent: Boolean(activeDeviceId && file.deviceId === activeDeviceId),
+                    lastTimestamp: timestamp,
+                });
+            } else {
+                existing.backupCount += 1;
+                if (timestamp > existing.lastTimestamp) {
+                    existing.lastTimestamp = timestamp;
+                    existing.lastBackup = formatBackupDate(timestamp);
+                    existing.name = file.displayDeviceName;
+                }
+            }
+        }
+
+        setDeviceHistory(
+            Array.from(devices.values())
+                .sort((a, b) => Number(b.isCurrent) - Number(a.isCurrent) || b.lastTimestamp - a.lastTimestamp)
+                .map(({ lastTimestamp, ...device }) => device)
+        );
+    };
+
+    const copyDeviceId = async () => {
+        if (!currentDeviceId) return;
+        try {
+            await navigator.clipboard.writeText(currentDeviceId);
+            showToast('success', t('device_id_copied'));
+        } catch {
+            showToast('error', t('copy_failed'));
         }
     };
 
@@ -179,19 +270,37 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         setRestoreLoading(true);
 
         try {
+            const activeDeviceId = currentDeviceId || await getWebDAVDeviceId();
+            setCurrentDeviceId(activeDeviceId);
             await applyRetentionPolicy();
-            const files = (await listWebDAVBackups(serverUrl, username, password)).sort((a, b) => b.timestamp - a.timestamp).map((file) => ({
-                name: file.name,
-                date: file.timestamp ? new Date(file.timestamp).toLocaleString() : 'Unknown',
-                deviceName: file.legacy
-                    ? t('legacy_backup')
-                    : file.deviceName?.replace(/-/g, ' ') || t('device_id_label', [file.deviceId || t('unknown_device')]),
+            const files = (await listWebDAVBackups(serverUrl, username, password)).sort((a, b) => b.timestamp - a.timestamp);
+            const history = await Promise.all(files.map(async (file): Promise<BackupHistoryItem> => {
+                try {
+                    const backupData = await downloadWebDAVBackup<OTPEntryInterface>(serverUrl, username, password, file.name);
+                    const backupTimestamp = backupData.timestamp || file.timestamp;
+                    return {
+                        ...file,
+                        backupTimestamp,
+                        accountCount: backupData.accounts.length,
+                        displayDeviceName: getDisplayDeviceName(file, backupData.deviceName),
+                        date: formatBackupDate(backupTimestamp),
+                    };
+                } catch {
+                    return {
+                        ...file,
+                        backupTimestamp: file.timestamp,
+                        displayDeviceName: getDisplayDeviceName(file),
+                        date: formatBackupDate(file.timestamp),
+                    };
+                }
             }));
 
-            setBackupFiles(files);
+            setBackupFiles(history);
+            buildDeviceHistory(history, activeDeviceId);
             setShowRestoreList(true);
+            setRestorePreview(null);
 
-            if (files.length === 0) {
+            if (history.length === 0) {
                 showToast('error', t('no_backups_found'));
             }
         } catch (err) {
@@ -201,8 +310,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         }
     };
 
-    // Restore from selected backup | 从选定的备份恢复
-    const handleRestore = async (filename: string) => {
+    const prepareRestorePreview = async (file: BackupHistoryItem) => {
         if (!serverUrl || !username || !password) {
             showToast('error', t('configure_webdav_first'));
             return;
@@ -215,42 +323,60 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         }
 
         setRestoreLoading(true);
+
+        try {
+            const backupData = await downloadWebDAVBackup<OTPEntryInterface>(serverUrl, username, password, file.name);
+            const result = await chrome.storage.local.get(['entries']);
+            const existingAccounts: OTPEntryInterface[] = result.entries || [];
+            const summary = buildBackupMergePreview(existingAccounts, backupData.accounts);
+            setRestorePreview({
+                file: {
+                    ...file,
+                    accountCount: backupData.accounts.length,
+                    backupTimestamp: backupData.timestamp || file.backupTimestamp || file.timestamp,
+                    displayDeviceName: getDisplayDeviceName(file, backupData.deviceName),
+                    date: formatBackupDate(backupData.timestamp || file.backupTimestamp || file.timestamp),
+                },
+                accounts: backupData.accounts,
+                summary,
+            });
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : t('unknown_error');
+            showToast('error', t('restore_failed') + errorMsg);
+        } finally {
+            setRestoreLoading(false);
+        }
+    };
+
+    // Restore from selected backup | 从选定的备份恢复
+    const handleRestore = async () => {
+        if (!restorePreview) return;
+
+        setRestoreLoading(true);
         await addLocalizedSyncLog('INFO', 'RESTORE_START', {
             messageKey: 'log_restore_start',
-            detailsFallback: filename
+            detailsFallback: restorePreview.file.name
         });
 
         try {
-            const backupData = await downloadWebDAVBackup<OTPEntryInterface>(serverUrl, username, password, filename);
+            const { summary } = restorePreview;
 
-            // Merge with existing accounts | 与现有账户合并
-            const result = await chrome.storage.local.get(['entries']);
-            const existingAccounts = result.entries || [];
-
-            // First merge all accounts | 先合并所有账户
-            const allAccounts = [...existingAccounts, ...backupData.accounts];
-
-            // Then deduplicate by secret (consistent with performDownload and background.ts)
-            // 基于 secret 去重（与 performDownload 和 background.ts 保持一致）
-            const {
-                accounts: deduplicatedAccounts,
-                removedDuplicates,
-            } = dedupeAccountsBySecret(allAccounts, { duplicatePreference: 'last' });
-
-            const importCount = deduplicatedAccounts.length - existingAccounts.length;
-
-            await chrome.storage.local.set({ entries: deduplicatedAccounts, entriesLastModified: Date.now() });
+            await chrome.storage.local.set({ entries: summary.mergedAccounts, entriesLastModified: Date.now() });
 
             // Update global state immediately | 立即更新全局状态
-            accountsDispatch({ type: 'setEntries', payload: deduplicatedAccounts });
+            accountsDispatch({ type: 'setEntries', payload: summary.mergedAccounts });
 
             await addLocalizedSyncLog('INFO', 'RESTORE_SUCCESS', {
                 messageKey: 'log_restore_success',
                 detailsKey: 'log_details_imported_deduped',
-                detailsArgs: [String(importCount), String(removedDuplicates)]
+                detailsArgs: [String(summary.newCount), String(summary.removedDuplicates)]
             });
-            showToast('success', t('restore_success', [importCount.toString()]));
+            showToast('success', t('restore_success_with_updates', [
+                summary.newCount.toString(),
+                summary.updatedCount.toString(),
+            ]));
             setShowRestoreList(false);
+            setRestorePreview(null);
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : t('unknown_error');
             await addLocalizedSyncLog('ERROR', 'RESTORE_FAILED', {
@@ -282,22 +408,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
 
         // Save form data BEFORE requesting permission to prevent data loss
         // 在请求权限之前保存表单数据，防止数据丢失
-        const tempConfig = await withEncryptedWebDAVPassword({
-            serverUrl,
-            username,
-            autoBackup,
-            backupInterval: parseInt(backupInterval),
-            retentionDays
-        }, password);
-        await chrome.storage.local.set({ webdavConfig: tempConfig });
-
-        // Request permission for WebDAV server | 请求 WebDAV 服务器访问权限
-        if (!await ensureWebDAVPermission(serverUrl)) {
-            showToast('error', t('permission_denied'));
-            return;
-        }
-
-        const config = await withEncryptedWebDAVPassword({
+        await saveLocalWebDAVConfigDraft({
             serverUrl,
             username,
             autoBackup,
@@ -306,8 +417,20 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             syncOnStartup
         }, password);
 
-        // Save config to storage | 保存配置到存储
-        await chrome.storage.local.set({ webdavConfig: config });
+        // Request permission for WebDAV server | 请求 WebDAV 服务器访问权限
+        if (!await ensureWebDAVPermission(serverUrl)) {
+            showToast('error', t('permission_denied'));
+            return;
+        }
+
+        await saveWebDAVConfig({
+            serverUrl,
+            username,
+            autoBackup,
+            backupInterval: parseInt(backupInterval),
+            retentionDays,
+            syncOnStartup
+        }, password);
 
         // Configure auto-backup alarm | 配置自动备份定时器
         if (autoBackup) {
@@ -428,9 +551,10 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         try {
             await persistDeviceName();
             // 1. Get local data and its timestamp | 获取本地数据及其时间戳
-            const localResult = await chrome.storage.local.get(['entries', 'entriesLastModified']);
+            const localResult = await chrome.storage.local.get(['entries', 'entriesLastModified', 'lastSyncedTimestamp']);
             const localEntries: OTPEntryInterface[] = localResult.entries || [];
             const localTimestamp = localResult.entriesLastModified || 0;
+            const lastSyncedTimestamp = localResult.lastSyncedTimestamp || 0;
 
             // 2. Get remote latest backup file info | 获取远程最新备份文件信息
             const latestRemoteFile = await getLatestWebDAVBackup(serverUrl, username, password);
@@ -444,6 +568,27 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                 } else {
                     showToast('success', t('sync_up_to_date'));
                 }
+            } else if (
+                latestRemoteFile.timestamp > lastSyncedTimestamp &&
+                localTimestamp > lastSyncedTimestamp &&
+                localEntries.length > 0
+            ) {
+                const backupData = await downloadWebDAVBackup<OTPEntryInterface>(serverUrl, username, password, latestRemoteFile.name);
+                const summary = buildBackupMergePreview(localEntries, backupData.accounts);
+                setSyncConflict({
+                    remoteFileName: latestRemoteFile.name,
+                    remoteDate: formatBackupDate(backupData.timestamp || latestRemoteFile.timestamp),
+                    remoteAccounts: backupData.accounts,
+                    localAccounts: localEntries,
+                    summary,
+                });
+                showToast('error', t('sync_conflict_detected'));
+                await addLocalizedSyncLog('WARN', 'BACKUP_FAILED', {
+                    messageKey: 'sync_conflict_detected',
+                    detailsKey: 'log_details_file',
+                    detailsArgs: [latestRemoteFile.name]
+                });
+                return;
             } else if (localTimestamp === 0 && localEntries.length === 0) {
                 // No local data, download remote | 没有本地数据，下载远程
                 showToast('success', t('sync_downloading'));
@@ -511,17 +656,71 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         accountsDispatch({ type: 'setEntries', payload: deduplicatedAccounts });
     };
 
+    const resolveSyncConflict = async (resolution: SyncConflictResolution) => {
+        if (!syncConflict) return;
+
+        setSyncing(true);
+        try {
+            let nextEntries: OTPEntryInterface[];
+
+            if (resolution === 'merge') {
+                nextEntries = syncConflict.summary.mergedAccounts;
+                await chrome.storage.local.set({ entries: nextEntries, entriesLastModified: Date.now() });
+                accountsDispatch({ type: 'setEntries', payload: nextEntries });
+                await uploadWebDAVBackup(serverUrl, username, password, nextEntries);
+            } else if (resolution === 'local') {
+                nextEntries = normalizeBackupAccounts(syncConflict.localAccounts);
+                await chrome.storage.local.set({ entries: nextEntries, entriesLastModified: Date.now() });
+                accountsDispatch({ type: 'setEntries', payload: nextEntries });
+                await uploadWebDAVBackup(serverUrl, username, password, nextEntries);
+            } else {
+                nextEntries = normalizeBackupAccounts(syncConflict.remoteAccounts);
+                await chrome.storage.local.set({ entries: nextEntries, entriesLastModified: Date.now() });
+                accountsDispatch({ type: 'setEntries', payload: nextEntries });
+            }
+
+            await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
+            await applyRetentionPolicy();
+            await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {
+                messageKey: 'sync_conflict_resolved',
+                detailsKey: resolution === 'merge'
+                    ? 'sync_conflict_resolve_merge'
+                    : resolution === 'local'
+                        ? 'sync_conflict_resolve_local'
+                        : 'sync_conflict_resolve_remote'
+            });
+            setSyncConflict(null);
+            showToast('success', t('sync_complete'));
+            await refreshLogs();
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : t('unknown_error');
+            await addLocalizedSyncLog('ERROR', 'BACKUP_FAILED', {
+                messageKey: 'log_sync_failed',
+                detailsFallback: errorMsg
+            });
+            showToast('error', t('sync_failed') + errorMsg);
+        } finally {
+            setSyncing(false);
+        }
+    };
+
     // Load saved config on mount | 组件挂载时加载已保存的配置
     React.useEffect(() => {
         const loadConfig = async () => {
-            const [result, savedDeviceName] = await Promise.all([
-                chrome.storage.local.get(['webdavConfig']),
+            const [config, savedDeviceName, savedDeviceId] = await Promise.all([
+                loadWebDAVConfig(),
                 getWebDAVDeviceName(),
+                getWebDAVDeviceId(),
             ]);
             setDeviceName(savedDeviceName);
-            if (result.webdavConfig) {
-                const config = await migratePlainWebDAVConfig(result.webdavConfig);
-                const decryptedPassword = await decryptWebDAVPassword(config);
+            setCurrentDeviceId(savedDeviceId);
+            if (config) {
+                let decryptedPassword = '';
+                try {
+                    decryptedPassword = await decryptWebDAVPassword(config);
+                } catch {
+                    decryptedPassword = '';
+                }
                 setServerUrl(config?.serverUrl || '');
                 setUsername(config?.username || '');
                 setPassword(decryptedPassword);
@@ -625,25 +824,47 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                                 {loading ? t('backup_process') : t('btn_backup_now')}
                             </button>
                         </div>
+
+                        <div className="device-management-card">
+                            <div className="device-management-main">
+                                <span className="device-management-label">{t('current_device')}</span>
+                                <code>{currentDeviceId || t('unknown_device')}</code>
+                            </div>
+                            <button
+                                type="button"
+                                className="btn-subtle"
+                                onClick={copyDeviceId}
+                                disabled={!currentDeviceId}
+                            >
+                                {t('copy_device_id')}
+                            </button>
+                        </div>
+
+                        {deviceHistory.length > 0 && (
+                            <div className="backup-list device-history-panel">
+                                <h4>{t('known_devices')}</h4>
+                                <div className="device-history-list">
+                                    {deviceHistory.map((device) => (
+                                        <div className="device-history-row" key={device.id}>
+                                            <div>
+                                                <span className="device-history-name">
+                                                    {device.name}
+                                                    {device.isCurrent && <strong>{t('current_device_badge')}</strong>}
+                                                </span>
+                                                <span className="device-history-id">{device.id}</span>
+                                            </div>
+                                            <span>{t('device_backup_summary', [String(device.backupCount), device.lastBackup])}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </section>
 
                     <section className="webdav-section">
                         <h3>{t('webdav_automation')}</h3>
 
                         <div className="webdav-toggle-grid">
-                            <div className="toggle-setting webdav-toggle-compact">
-                                <span>{t('auto_backup')}</span>
-                                <label className="toggle-switch">
-                                    <input
-                                        type="checkbox"
-                                        aria-label={t('auto_backup')}
-                                        checked={autoBackup}
-                                        onChange={(e) => setAutoBackup(e.target.checked)}
-                                    />
-                                    <span className="toggle-slider" />
-                                </label>
-                            </div>
-
                             <div className="toggle-setting webdav-toggle-compact">
                                 <span>{t('sync_on_startup')}</span>
                                 <label className="toggle-switch">
@@ -656,41 +877,60 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                                     <span className="toggle-slider" />
                                 </label>
                             </div>
+
+                            <div className="toggle-setting webdav-toggle-compact">
+                                <span>{t('auto_backup')}</span>
+                                <label className="toggle-switch">
+                                    <input
+                                        type="checkbox"
+                                        aria-label={t('auto_backup')}
+                                        checked={autoBackup}
+                                        onChange={(e) => setAutoBackup(e.target.checked)}
+                                    />
+                                    <span className="toggle-slider" />
+                                </label>
+                            </div>
                         </div>
 
                         {autoBackup && (
-                            <div className="webdav-policy-grid">
-                                <div className="form-group">
-                                    <label htmlFor="backupInterval">{t('backup_frequency')}</label>
-                                    <select
-                                        id="backupInterval"
-                                        value={backupInterval}
-                                        onChange={(e) => setBackupInterval(e.target.value)}
-                                        className="form-select"
-                                    >
-                                        <option value="30">{t('freq_30m')}</option>
-                                        <option value="60">{t('freq_1h')}</option>
-                                        <option value="360">{t('freq_6h')}</option>
-                                        <option value="720">{t('freq_12h')}</option>
-                                        <option value="1440">{t('freq_24h')}</option>
-                                        <option value="10080">{t('freq_week')}</option>
-                                    </select>
-                                </div>
+                            <div className="webdav-auto-options">
+                                <div className="webdav-policy-grid">
+                                    <div className="form-group">
+                                        <label htmlFor="backupInterval">{t('backup_frequency')}</label>
+                                        <span className="select-control">
+                                            <select
+                                                id="backupInterval"
+                                                value={backupInterval}
+                                                onChange={(e) => setBackupInterval(e.target.value)}
+                                                className="form-select"
+                                            >
+                                                <option value="30">{t('freq_30m')}</option>
+                                                <option value="60">{t('freq_1h')}</option>
+                                                <option value="360">{t('freq_6h')}</option>
+                                                <option value="720">{t('freq_12h')}</option>
+                                                <option value="1440">{t('freq_24h')}</option>
+                                                <option value="10080">{t('freq_week')}</option>
+                                            </select>
+                                        </span>
+                                    </div>
 
-                                <div className="form-group">
-                                    <label htmlFor="retentionDays">{t('retention_policy')}</label>
-                                    <select
-                                        id="retentionDays"
-                                        value={retentionDays}
-                                        onChange={(e) => setRetentionDays(parseInt(e.target.value))}
-                                        className="form-select"
-                                    >
-                                        <option value={7}>{t('retain_7d')}</option>
-                                        <option value={30}>{t('retain_30d')}</option>
-                                        <option value={90}>{t('retain_90d')}</option>
-                                        <option value={365}>{t('retain_1y')}</option>
-                                        <option value={-1}>{t('retain_forever')}</option>
-                                    </select>
+                                    <div className="form-group">
+                                        <label htmlFor="retentionDays">{t('retention_policy')}</label>
+                                        <span className="select-control">
+                                            <select
+                                                id="retentionDays"
+                                                value={retentionDays}
+                                                onChange={(e) => setRetentionDays(parseInt(e.target.value))}
+                                                className="form-select"
+                                            >
+                                                <option value={7}>{t('retain_7d')}</option>
+                                                <option value={30}>{t('retain_30d')}</option>
+                                                <option value={90}>{t('retain_90d')}</option>
+                                                <option value={365}>{t('retain_1y')}</option>
+                                                <option value={-1}>{t('retain_forever')}</option>
+                                            </select>
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -704,11 +944,20 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                             <button
                                 type="button"
                                 className="btn-secondary"
+                                onClick={handleSync}
+                                disabled={syncing}
+                            >
+                                <span className="btn-icon">{syncing ? <SpinnerIcon /> : <CloudUploadIcon />}</span>
+                                {syncing ? t('sync_checking') : t('sync_button')}
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-secondary"
                                 onClick={listBackups}
                                 disabled={restoreLoading}
                             >
                                 <span className="btn-icon">{restoreLoading ? <SpinnerIcon /> : <DownloadIcon />}</span>
-                                {restoreLoading ? t('restore_process') : t('btn_restore_cloud')}
+                                {restoreLoading ? t('restore_process') : t('btn_load_backup_history')}
                             </button>
                             <button
                                 type="button"
@@ -724,24 +973,99 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                             </button>
                         </div>
 
+                        {syncConflict && (
+                            <div className="backup-preview-panel sync-conflict-panel">
+                                <div className="backup-preview-title">{t('sync_conflict_title')}</div>
+                                <p>{t('sync_conflict_description', [syncConflict.remoteDate])}</p>
+                                <div className="backup-preview-grid">
+                                    <div>
+                                        <span>{t('preview_new')}</span>
+                                        <strong>{syncConflict.summary.newCount}</strong>
+                                    </div>
+                                    <div>
+                                        <span>{t('preview_updates')}</span>
+                                        <strong>{syncConflict.summary.updatedCount}</strong>
+                                    </div>
+                                    <div>
+                                        <span>{t('preview_duplicates')}</span>
+                                        <strong>{syncConflict.summary.duplicateCount}</strong>
+                                    </div>
+                                    <div>
+                                        <span>{t('preview_after_merge')}</span>
+                                        <strong>{syncConflict.summary.mergedCount}</strong>
+                                    </div>
+                                </div>
+                                <div className="conflict-action-grid">
+                                    <button type="button" className="btn-primary" onClick={() => resolveSyncConflict('merge')} disabled={syncing}>
+                                        {t('sync_conflict_merge')}
+                                    </button>
+                                    <button type="button" className="btn-secondary" onClick={() => resolveSyncConflict('local')} disabled={syncing}>
+                                        {t('sync_conflict_use_local')}
+                                    </button>
+                                    <button type="button" className="btn-secondary" onClick={() => resolveSyncConflict('remote')} disabled={syncing}>
+                                        {t('sync_conflict_use_remote')}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {showRestoreList && backupFiles.length > 0 && (
                             <div className="backup-list">
-                                <h4>{t('select_restore_backup')}</h4>
+                                <h4>{t('backup_history_title')}</h4>
                                 <div className="backup-list-scroll">
                                     {backupFiles.map((file) => (
                                         <button
                                             type="button"
                                             key={file.name}
-                                            onClick={() => handleRestore(file.name)}
-                                            className="backup-file-row"
+                                            onClick={() => prepareRestorePreview(file)}
+                                            className={`backup-file-row ${restorePreview?.file.name === file.name ? 'selected' : ''}`}
                                         >
                                             <span className="backup-file-main">
                                                 <span className="backup-file-name">{file.name}</span>
-                                                <span className="backup-file-device">{file.deviceName}</span>
+                                                <span className="backup-file-device">
+                                                    {file.displayDeviceName}
+                                                    {file.accountCount !== undefined && (
+                                                        <span> · {t('backup_account_count', [String(file.accountCount)])}</span>
+                                                    )}
+                                                </span>
                                             </span>
                                             <span className="backup-file-date">{file.date}</span>
                                         </button>
                                     ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {restorePreview && (
+                            <div className="backup-preview-panel">
+                                <div className="backup-preview-title">{t('restore_preview_title')}</div>
+                                <p>{restorePreview.file.name}</p>
+                                <div className="backup-preview-grid">
+                                    <div>
+                                        <span>{t('preview_total')}</span>
+                                        <strong>{restorePreview.summary.incomingCount}</strong>
+                                    </div>
+                                    <div>
+                                        <span>{t('preview_new')}</span>
+                                        <strong>{restorePreview.summary.newCount}</strong>
+                                    </div>
+                                    <div>
+                                        <span>{t('preview_updates')}</span>
+                                        <strong>{restorePreview.summary.updatedCount}</strong>
+                                    </div>
+                                    <div>
+                                        <span>{t('preview_duplicates')}</span>
+                                        <strong>{restorePreview.summary.duplicateCount}</strong>
+                                    </div>
+                                </div>
+                                <p>{t('restore_preview_result', [restorePreview.summary.mergedCount.toString()])}</p>
+                                <div className="restore-preview-actions">
+                                    <button type="button" className="btn-secondary" onClick={() => setRestorePreview(null)}>
+                                        {t('cancel')}
+                                    </button>
+                                    <button type="button" className="btn-primary" onClick={handleRestore} disabled={restoreLoading}>
+                                        {restoreLoading ? t('restore_process') : t('btn_confirm_restore')}
+                                    </button>
                                 </div>
                             </div>
                         )}

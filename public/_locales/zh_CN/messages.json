@@ -1349,5 +1349,128 @@
   "log_details_auto_backup_disabled": {
     "message": "自动备份: 关闭",
     "description": "Log details for disabled auto backup."
+  },
+  "cancel": {
+    "message": "取消"
+  },
+  "clipboard_auto_clear": {
+    "message": "剪贴板自动清理"
+  },
+  "clipboard_auto_clear_description": {
+    "message": "复制验证码后延迟清空剪贴板。"
+  },
+  "clipboard_clear_15s": {
+    "message": "15 秒"
+  },
+  "clipboard_clear_30s": {
+    "message": "30 秒"
+  },
+  "clipboard_clear_60s": {
+    "message": "60 秒"
+  },
+  "clipboard_clear_scheduled": {
+    "message": "已复制，剪贴板将在 $1 秒后清理。"
+  },
+  "import_success_with_updates": {
+    "message": "导入完成，新增 $1 个，更新 $2 个。"
+  },
+  "import_preview_title": {
+    "message": "导入预览"
+  },
+  "preview_total": {
+    "message": "总数"
+  },
+  "preview_new": {
+    "message": "新增"
+  },
+  "preview_updates": {
+    "message": "更新"
+  },
+  "preview_duplicates": {
+    "message": "重复"
+  },
+  "preview_after_merge": {
+    "message": "合并后"
+  },
+  "import_preview_result": {
+    "message": "导入后，此浏览器将有 $1 个账户。"
+  },
+  "btn_preview_import": {
+    "message": "预览"
+  },
+  "btn_confirm_import": {
+    "message": "确认导入"
+  },
+  "unknown_time": {
+    "message": "未知时间"
+  },
+  "device_id_copied": {
+    "message": "设备 ID 已复制"
+  },
+  "current_device": {
+    "message": "当前设备"
+  },
+  "copy_device_id": {
+    "message": "复制 ID"
+  },
+  "btn_load_backup_history": {
+    "message": "备份历史"
+  },
+  "backup_history_title": {
+    "message": "备份历史"
+  },
+  "backup_account_count": {
+    "message": "$1 个账户"
+  },
+  "restore_preview_title": {
+    "message": "恢复预览"
+  },
+  "restore_preview_result": {
+    "message": "恢复后，此浏览器将有 $1 个账户。"
+  },
+  "restore_success_with_updates": {
+    "message": "恢复完成，新增 $1 个，更新 $2 个。"
+  },
+  "btn_confirm_restore": {
+    "message": "确认恢复"
+  },
+  "known_devices": {
+    "message": "已知设备"
+  },
+  "current_device_badge": {
+    "message": "当前"
+  },
+  "device_backup_summary": {
+    "message": "$1 个备份 · 最近 $2"
+  },
+  "sync_conflict_detected": {
+    "message": "检测到同步冲突"
+  },
+  "sync_conflict_title": {
+    "message": "同步冲突"
+  },
+  "sync_conflict_description": {
+    "message": "本地数据和远端最新备份在上次同步后都发生了变化。远端备份时间：$1。"
+  },
+  "sync_conflict_merge": {
+    "message": "合并"
+  },
+  "sync_conflict_use_local": {
+    "message": "使用本地"
+  },
+  "sync_conflict_use_remote": {
+    "message": "使用远端"
+  },
+  "sync_conflict_resolved": {
+    "message": "同步冲突已处理"
+  },
+  "sync_conflict_resolve_merge": {
+    "message": "已合并本地和远端数据"
+  },
+  "sync_conflict_resolve_local": {
+    "message": "已上传本地数据"
+  },
+  "sync_conflict_resolve_remote": {
+    "message": "已使用远端备份"
   }
 }

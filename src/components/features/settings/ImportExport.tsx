@@ -6,10 +6,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useBackup, useNotification, useAccounts } from '@/store';
+import { useNotification, useAccounts } from '@/store';
 import { useI18n } from '@/i18n';
 import { SecureHash } from '@/models/encryption';
-import { dedupeAccountsBySecret } from '@/utils/accounts';
+import { buildBackupMergePreview, type BackupMergePreview } from '@/utils/backup-preview';
 import { formatLocalDate } from '@/utils/date';
 
 interface ImportExportProps {
@@ -42,8 +42,10 @@ export default function ImportExport({ onClose }: ImportExportProps) {
   const [exportPassword, setExportPassword] = useState('');
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPassword, setImportPassword] = useState('');
+  const [importPreview, setImportPreview] = useState<BackupMergePreview | null>(null);
+  const [previewAccounts, setPreviewAccounts] = useState<OTPEntryInterface[]>([]);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [accountCount, setAccountCount] = useState(0);
-  const { dispatch } = useBackup();
   const { dispatch: notificationDispatch } = useNotification();
   const { dispatch: accountsDispatch } = useAccounts();
   const { t } = useI18n();
@@ -51,6 +53,11 @@ export default function ImportExport({ onClose }: ImportExportProps) {
   // Helper function to show toast | 显示 Toast 的辅助函数
   const showToast = (type: 'success' | 'error', text: string) => {
     notificationDispatch({ type, payload: text });
+  };
+
+  const clearImportPreview = () => {
+    setImportPreview(null);
+    setPreviewAccounts([]);
   };
 
   // Load account count on mount
@@ -116,6 +123,74 @@ export default function ImportExport({ onClose }: ImportExportProps) {
     }
   };
 
+  const readImportAccounts = async (): Promise<OTPEntryInterface[] | null> => {
+    if (!importFile) {
+      showToast('error', t('select_backup_file'));
+      return null;
+    }
+
+    const text = await importFile.text();
+    const backupData = JSON.parse(text);
+
+    let accounts;
+    if (backupData.encrypted && backupData.data) {
+      if (!importPassword) {
+        showToast('error', t('enter_decrypt_password'));
+        return null;
+      }
+
+      const decryptedJson = SecureHash.decryptData(backupData.data, importPassword);
+      if (!decryptedJson) {
+        showToast('error', t('decrypt_failed'));
+        return null;
+      }
+
+      try {
+        accounts = JSON.parse(decryptedJson);
+      } catch {
+        showToast('error', t('decrypt_format_error'));
+        return null;
+      }
+    } else if (backupData.accounts) {
+      accounts = backupData.accounts;
+    } else {
+      showToast('error', t('format_error'));
+      return null;
+    }
+
+    if (!Array.isArray(accounts)) {
+      showToast('error', t('format_error'));
+      return null;
+    }
+
+    return accounts as OTPEntryInterface[];
+  };
+
+  const prepareImportPreview = async () => {
+    const accounts = await readImportAccounts();
+    if (!accounts) return null;
+
+    const result = await chrome.storage.local.get(['entries']);
+    const existingAccounts: OTPEntryInterface[] = result.entries || [];
+    const preview = buildBackupMergePreview(existingAccounts, accounts);
+    setPreviewAccounts(accounts);
+    setImportPreview(preview);
+    return { accounts, preview };
+  };
+
+  const handlePreviewImport = async () => {
+    try {
+      setPreviewLoading(true);
+      await prepareImportPreview();
+    } catch (err) {
+      console.error('Import preview failed:', err);
+      showToast('error', t('import_failed') + (err instanceof Error ? err.message : t('unknown_error')));
+      clearImportPreview();
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   const handleImport = async () => {
     try {
       if (!importFile) {
@@ -123,60 +198,23 @@ export default function ImportExport({ onClose }: ImportExportProps) {
         return;
       }
 
-      // Read file
-      const text = await importFile.text();
-      const backupData = JSON.parse(text);
+      const prepared = importPreview
+        ? { accounts: previewAccounts, preview: importPreview }
+        : await prepareImportPreview();
+      if (!prepared) return;
 
-      // Check if file is encrypted (new format) or plain (legacy)
-      let accounts;
-      if (backupData.encrypted && backupData.data) {
-        // Encrypted file requires password | 加密文件需要密码
-        if (!importPassword) {
-          showToast('error', t('enter_decrypt_password'));
-          return;
-        }
-        // Decrypt the data
-        const decryptedJson = SecureHash.decryptData(backupData.data, importPassword);
-        if (!decryptedJson) {
-          showToast('error', t('decrypt_failed'));
-          return;
-        }
-        try {
-          accounts = JSON.parse(decryptedJson);
-        } catch {
-          showToast('error', t('decrypt_format_error'));
-          return;
-        }
-      } else if (backupData.accounts) {
-        // Unencrypted format (no password needed) | 未加密格式（不需要密码）
-        accounts = backupData.accounts;
-      } else {
-        showToast('error', t('format_error'));
-        return;
-      }
-
-      if (!Array.isArray(accounts)) {
-        showToast('error', t('format_error'));
-        return;
-      }
-
-      // Merge with existing accounts
-      const result = await chrome.storage.local.get(['entries']);
-      const existingAccounts = result.entries || [];
-      const { accounts: mergedAccounts } = dedupeAccountsBySecret(
-        [...existingAccounts, ...accounts],
-        { duplicatePreference: 'last' }
-      );
-      const importCount = Math.max(mergedAccounts.length - existingAccounts.length, 0);
-
-      await chrome.storage.local.set({ entries: mergedAccounts, entriesLastModified: Date.now() });
+      await chrome.storage.local.set({ entries: prepared.preview.mergedAccounts, entriesLastModified: Date.now() });
 
       // Update global state immediately | 立即更新全局状态
-      accountsDispatch({ type: 'setEntries', payload: mergedAccounts });
+      accountsDispatch({ type: 'setEntries', payload: prepared.preview.mergedAccounts });
 
-      showToast('success', t('import_success', [importCount.toString()]));
+      showToast('success', t('import_success_with_updates', [
+        prepared.preview.newCount.toString(),
+        prepared.preview.updatedCount.toString(),
+      ]));
       setImportFile(null);
       setImportPassword('');
+      clearImportPreview();
     } catch (err) {
       console.error('Import failed:', err);
       showToast('error', t('import_failed') + (err instanceof Error ? err.message : t('unknown_error')));
@@ -263,7 +301,10 @@ export default function ImportExport({ onClose }: ImportExportProps) {
                   type="file"
                   id="importFile"
                   accept=".json"
-                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                  onChange={(e) => {
+                    setImportFile(e.target.files?.[0] || null);
+                    clearImportPreview();
+                  }}
                 />
                 <div className="file-input-display">
                   {importFile ? importFile.name : t('select_file_placeholder')}
@@ -277,25 +318,63 @@ export default function ImportExport({ onClose }: ImportExportProps) {
                 type="password"
                 id="importPassword"
                 value={importPassword}
-                onChange={(e) => setImportPassword(e.target.value)}
+                onChange={(e) => {
+                  setImportPassword(e.target.value);
+                  clearImportPreview();
+                }}
                 placeholder={t('enter_encrypt_password')}
               />
             </div>
 
-            <div className="import-warning">
-              <span className="import-warning-icon"><AlertIcon /></span>
-              {t('import_warning')}
-            </div>
+            {importPreview ? (
+              <div className="backup-preview-panel">
+                <div className="backup-preview-title">{t('import_preview_title')}</div>
+                <div className="backup-preview-grid">
+                  <div>
+                    <span>{t('preview_total')}</span>
+                    <strong>{importPreview.incomingCount}</strong>
+                  </div>
+                  <div>
+                    <span>{t('preview_new')}</span>
+                    <strong>{importPreview.newCount}</strong>
+                  </div>
+                  <div>
+                    <span>{t('preview_updates')}</span>
+                    <strong>{importPreview.updatedCount}</strong>
+                  </div>
+                  <div>
+                    <span>{t('preview_duplicates')}</span>
+                    <strong>{importPreview.duplicateCount}</strong>
+                  </div>
+                </div>
+                <p>{t('import_preview_result', [importPreview.mergedCount.toString()])}</p>
+              </div>
+            ) : (
+              <div className="import-warning">
+                <span className="import-warning-icon"><AlertIcon /></span>
+                {t('import_warning')}
+              </div>
+            )}
 
-            <button
-              type="button"
-              className="btn-primary btn-full"
-              onClick={handleImport}
-              disabled={!importFile}
-            >
-              <span className="btn-icon"><UploadIcon /></span>
-              {t('btn_import_file')}
-            </button>
+            <div className="import-action-grid">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handlePreviewImport}
+                disabled={!importFile || previewLoading}
+              >
+                {previewLoading ? t('restore_process') : t('btn_preview_import')}
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleImport}
+                disabled={!importFile || !importPreview}
+              >
+                <span className="btn-icon"><UploadIcon /></span>
+                {t('btn_confirm_import')}
+              </button>
+            </div>
           </div>
         )}
 

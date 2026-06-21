@@ -23,6 +23,7 @@ interface UserSettingsData {
 
   // Syncable settings | 可同步设置
   autolock?: number;
+  clipboardClearSeconds?: number;
   encodedPhrase?: string;
   smartFilter?: boolean;
   theme?: string;
@@ -161,13 +162,12 @@ export class UserSettings {
 
 type BooleanOption = "smartFilter" | "webdavConfigured";
 
-type NumberOption = "autolock" | "lastRemindingBackupTime" | "offset";
+type NumberOption = "autolock" | "clipboardClearSeconds" | "lastRemindingBackupTime" | "offset";
 
 function isBooleanOption(key: string): key is BooleanOption {
   return ["smartFilter", "webdavConfigured"].includes(key);
 }
 
 function isNumberOption(key: string): key is NumberOption {
-  return ["autolock", "lastRemindingBackupTime", "offset"].includes(key);
+  return ["autolock", "clipboardClearSeconds", "lastRemindingBackupTime", "offset"].includes(key);
 }
-
