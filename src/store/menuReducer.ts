@@ -28,7 +28,7 @@ const initialState: MenuState = {
   version: '1.0.4',
   zoom: 100,
   smartFilter: true,
-  theme: 'light',
+  theme: 'system',
   autolock: 0,
   language: 'system',
 };

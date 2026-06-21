@@ -11,7 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStyle, useMenu, useNotification, useAccounts } from '@/store';
 import { UserSettings } from '@/models/settings';
-import { addSyncLog } from '@/utils/sync-logger';
+import { addLocalizedSyncLog } from '@/utils/sync-logger';
 import { dedupeAccountsBySecret } from '@/utils/accounts';
 import { decryptWebDAVPassword, migratePlainWebDAVConfig } from '@/utils/webdav-credentials';
 import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, uploadWebDAVBackup } from '@/utils/webdav-sync';
@@ -146,7 +146,11 @@ export default function Popup() {
 
             await chrome.storage.local.set({ entries: deduplicatedAccounts, entriesLastModified: Date.now(), lastSyncedTimestamp: Date.now() });
             accountsDispatch({ type: 'setEntries', payload: deduplicatedAccounts });
-            await addSyncLog('INFO', 'BACKUP_SUCCESS', '启动同步成功（下载）', `去重 ${removedCount} 个账户`);
+            await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {
+              messageKey: 'log_startup_sync_download_success',
+              detailsKey: 'log_details_deduped',
+              detailsArgs: [String(removedCount)]
+            });
             console.log(`[Auths] Startup sync: merged and deduplicated, removed ${removedCount} duplicates`);
           } else if (localTimestamp > lastSyncedTimestamp && localEntries.length > 0) {
             // Local has changes since last sync, upload | 本地自上次同步后有变更，上传
@@ -165,27 +169,36 @@ export default function Popup() {
 
             const filename = await uploadWebDAVBackup(config.serverUrl, config.username, password, deduplicatedEntries);
             await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
-            await addSyncLog('INFO', 'BACKUP_SUCCESS', '启动同步成功（上传）', `文件: ${filename}`);
+            await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {
+              messageKey: 'log_startup_sync_upload_success',
+              detailsKey: 'log_details_file',
+              detailsArgs: [filename]
+            });
 
             console.log('[Auths] Startup sync: uploaded successfully');
           } else {
             console.log('[Auths] Startup sync: already up to date');
-            await addSyncLog('INFO', 'BACKUP_SUCCESS', '启动同步跳过', '本地和远程数据一致');
+            await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {
+              messageKey: 'log_startup_sync_skipped',
+              detailsKey: 'log_details_local_remote_up_to_date'
+            });
             await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
           }
 
           try {
             const cleanup = await cleanupExpiredWebDAVBackups(config.serverUrl, config.username, password, Number(config.retentionDays ?? 30));
             if (!cleanup.skipped && (cleanup.deleted.length > 0 || cleanup.failed.length > 0)) {
-              await addSyncLog(
-                cleanup.failed.length > 0 ? 'WARN' : 'INFO',
-                'BACKUP_SUCCESS',
-                '备份保留策略已执行',
-                `删除 ${cleanup.deleted.length} 个过期备份, 失败 ${cleanup.failed.length} 个`
-              );
+              await addLocalizedSyncLog(cleanup.failed.length > 0 ? 'WARN' : 'INFO', 'BACKUP_SUCCESS', {
+                messageKey: 'retention_cleanup_done',
+                detailsKey: 'log_details_retention_cleanup',
+                detailsArgs: [String(cleanup.deleted.length), String(cleanup.failed.length)]
+              });
             }
           } catch (cleanupError) {
-            await addSyncLog('WARN', 'BACKUP_SUCCESS', '备份成功，但保留策略执行失败', cleanupError instanceof Error ? cleanupError.message : '未知错误');
+            await addLocalizedSyncLog('WARN', 'BACKUP_SUCCESS', {
+              messageKey: 'retention_cleanup_failed',
+              detailsFallback: cleanupError instanceof Error ? cleanupError.message : 'Unknown error'
+            });
           }
         }
       } catch (err) {

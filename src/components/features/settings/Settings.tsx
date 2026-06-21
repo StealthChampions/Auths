@@ -210,9 +210,9 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                   value={normalizeThemePreference(menu.theme)}
                   onChange={(e) => handleThemeChange(normalizeThemePreference(e.target.value))}
                 >
+                  <option value="system">{t('follow_system')}</option>
                   <option value="light">{t('theme_light')}</option>
                   <option value="dark">{t('theme_dark')}</option>
-                  <option value="system">{t('follow_system')}</option>
                 </select>
                 <p className="setting-description">
                   {t('theme_description')}

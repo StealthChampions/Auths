@@ -179,7 +179,7 @@ export default function AddMethodSelector({ onClose, onSuccess, onManualEntry }:
       });
 
       // Show success notification
-      notificationDispatch({ type: 'success', payload: t('account_added_successfully') || 'Account added successfully!' });
+      notificationDispatch({ type: 'success', payload: t('account_added_successfully') });
       console.log('[Auths] Account added successfully');
 
       onSuccess();

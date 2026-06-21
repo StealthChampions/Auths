@@ -193,11 +193,10 @@ export default function EntryComponent({
 
     try {
       await navigator.clipboard.writeText(code);
-      const message = t('copied') || 'Copied';
-      notificationDispatch({ type: 'success', payload: message });
+      notificationDispatch({ type: 'success', payload: t('copied') });
     } catch (err) {
       console.error('Failed to copy:', err);
-      notificationDispatch({ type: 'error', payload: 'Failed to copy' });
+      notificationDispatch({ type: 'error', payload: t('copy_failed') });
     }
   };
 
@@ -269,7 +268,7 @@ export default function EntryComponent({
       tabIndex={tabindex}
       onClick={handleCopy}
       role="button"
-      aria-label={`Copy code for ${entry.issuer}`}
+      aria-label={t('copy_code_for', [entry.issuer])}
       data-hash={entry.hash}
       draggable={draggable}
       onDragStart={onDragStart}

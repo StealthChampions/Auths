@@ -182,6 +182,14 @@
         "message": "Copied",
         "description": "Copied."
     },
+    "copy_failed": {
+        "message": "Failed to copy",
+        "description": "Copy failed."
+    },
+    "copy_code_for": {
+        "message": "Copy code for $1",
+        "description": "Accessibility label for copying an account code."
+    },
     "feedback": {
         "message": "Feedback",
         "description": "Feedback."
@@ -1278,5 +1286,77 @@
     "sync_skipped_no_changes": {
         "message": "No changes, sync skipped",
         "description": "Sync skipped message."
+    },
+    "log_pre_upload_dedupe": {
+        "message": "Deduplicated before upload",
+        "description": "Log message for pre-upload dedupe."
+    },
+    "log_auto_sync_download_success": {
+        "message": "Auto sync completed (download)",
+        "description": "Log message for auto sync download success."
+    },
+    "log_auto_backup_upload_success": {
+        "message": "Auto backup completed (upload)",
+        "description": "Log message for auto backup upload success."
+    },
+    "log_auto_backup_skipped": {
+        "message": "Auto backup skipped (already up to date)",
+        "description": "Log message for skipped auto backup."
+    },
+    "log_auto_backup_failed": {
+        "message": "Auto backup failed",
+        "description": "Log message for auto backup failure."
+    },
+    "log_startup_sync_download_success": {
+        "message": "Startup sync completed (download)",
+        "description": "Log message for startup sync download success."
+    },
+    "log_startup_sync_upload_success": {
+        "message": "Startup sync completed (upload)",
+        "description": "Log message for startup sync upload success."
+    },
+    "log_startup_sync_skipped": {
+        "message": "Startup sync skipped",
+        "description": "Log message for skipped startup sync."
+    },
+    "log_sync_failed": {
+        "message": "Sync failed",
+        "description": "Log message for sync failure."
+    },
+    "log_details_added_deduped": {
+        "message": "Added $1 account(s), deduplicated $2",
+        "description": "Log details for imported and deduplicated accounts."
+    },
+    "log_details_imported_deduped": {
+        "message": "Imported $1 account(s), deduplicated $2",
+        "description": "Log details for restored and deduplicated accounts."
+    },
+    "log_details_deduped": {
+        "message": "Deduplicated $1 account(s)",
+        "description": "Log details for deduped accounts."
+    },
+    "log_details_removed_duplicates": {
+        "message": "Removed $1 duplicate account(s)",
+        "description": "Log details for removed duplicate accounts."
+    },
+    "log_details_file": {
+        "message": "File: $1",
+        "description": "Log details for backup filename."
+    },
+    "log_details_retention_cleanup": {
+        "message": "Deleted $1 expired backup(s), failed $2",
+        "description": "Log details for retention cleanup."
+    },
+    "log_details_local_remote_up_to_date": {
+        "message": "Local and remote data are already up to date",
+        "description": "Log details for up-to-date sync state."
+    },
+    "log_details_auto_backup_enabled": {
+        "message": "Auto backup: enabled",
+        "description": "Log details for enabled auto backup."
+    },
+    "log_details_auto_backup_disabled": {
+        "message": "Auto backup: disabled",
+        "description": "Log details for disabled auto backup."
     }
 }
