@@ -1,4 +1,5 @@
 import { dedupeAccountsBySecret, normalizeSecret } from '@/utils/accounts';
+import { normalizeAccountList } from '@/utils/account-normalization';
 
 export interface BackupMergePreview {
   localCount: number;
@@ -45,23 +46,24 @@ export function buildBackupMergePreview(
   localAccounts: OTPEntryInterface[],
   incomingAccounts: OTPEntryInterface[]
 ): BackupMergePreview {
+  const normalizedLocal = normalizeAccountList(localAccounts);
+  const normalizedIncoming = normalizeAccountList(incomingAccounts);
   const localBySecret = new Map<string, OTPEntryInterface>();
-  let invalidCount = 0;
+  let invalidCount = normalizedIncoming.invalidCount;
   let newCount = 0;
   let updatedCount = 0;
   let duplicateCount = 0;
 
-  for (const account of localAccounts) {
+  for (const account of normalizedLocal.accounts) {
     const secret = normalizeSecret(account.secret);
     if (secret && !localBySecret.has(secret)) {
       localBySecret.set(secret, account);
     }
   }
 
-  for (const account of incomingAccounts) {
+  for (const account of normalizedIncoming.accounts) {
     const secret = normalizeSecret(account.secret);
     if (!secret) {
-      invalidCount += 1;
       continue;
     }
 
@@ -76,13 +78,13 @@ export function buildBackupMergePreview(
   }
 
   const { accounts: mergedAccounts, removedDuplicates } = dedupeAccountsBySecret(
-    [...localAccounts, ...incomingAccounts],
+    [...normalizedLocal.accounts, ...normalizedIncoming.accounts],
     { duplicatePreference: 'last' }
   );
 
   return {
-    localCount: localAccounts.length,
-    incomingCount: incomingAccounts.length,
+    localCount: normalizedLocal.accounts.length,
+    incomingCount: normalizedIncoming.accounts.length,
     newCount,
     updatedCount,
     duplicateCount,
@@ -93,6 +95,7 @@ export function buildBackupMergePreview(
   };
 }
 
-export function normalizeBackupAccounts(accounts: OTPEntryInterface[]): OTPEntryInterface[] {
-  return dedupeAccountsBySecret(accounts, { duplicatePreference: 'last' }).accounts;
+export function normalizeBackupAccounts(accounts: unknown): OTPEntryInterface[] {
+  const normalized = normalizeAccountList(accounts);
+  return dedupeAccountsBySecret(normalized.accounts, { duplicatePreference: 'last' }).accounts;
 }

@@ -9,9 +9,10 @@
  */
 
 import { parseSiteName, countMatchedEntries } from '@/utils/site-match';
-import { dedupeAccountsBySecret, generateEntryHash, hasDuplicateSecret } from '@/utils/accounts';
+import { generateEntryHash, hasDuplicateSecret } from '@/utils/accounts';
 import { decryptWebDAVPassword, loadWebDAVConfig } from '@/utils/webdav-credentials';
-import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, uploadWebDAVBackup } from '@/utils/webdav-sync';
+import { runWebDAVSync } from '@/utils/webdav-sync-manager';
+import { cleanupExpiredWebDAVBackups } from '@/utils/webdav-sync';
 import { addLocalizedSyncLog } from '@/utils/sync-logger';
 import { debugError, debugLog } from '@/utils/logger';
 
@@ -101,83 +102,62 @@ export default defineBackground(() => {
           debugLog('[Auths Background] WebDAV not configured, skipping auto backup');
           return;
         }
-        // Get entries and timestamps | 获取账户数据和时间戳
-        const entriesResult = await chrome.storage.local.get(['entries', 'entriesLastModified']);
-        const entries = entriesResult.entries || [];
-        const localTimestamp = entriesResult.entriesLastModified || 0;
 
-        if (entries.length === 0) {
-          debugLog('[Auths Background] No entries to backup');
-          return;
-        }
+        const syncResult = await runWebDAVSync({
+          serverUrl: config.serverUrl,
+          username: config.username,
+          password,
+        });
 
-        // Get remote latest backup timestamp | 获取远程最新备份时间戳
-        const latestRemote = await getLatestWebDAVBackup(config.serverUrl, config.username, password);
-        const remoteTimestamp = latestRemote?.timestamp || 0;
-        const remoteFilename = latestRemote?.name || '';
-
-        // Sync decision based on timestamps | 基于时间戳的同步决策
-        if (remoteTimestamp > localTimestamp && remoteFilename) {
-          // Remote is newer, download | 远程更新，下载
+        if (syncResult.status === 'downloaded') {
           debugLog('[Auths Background] Remote is newer, downloading...');
           await addLocalizedSyncLog('INFO', 'AUTO_BACKUP_TRIGGER', {
             messageKey: 'sync_downloading',
             detailsKey: 'log_details_file',
-            detailsArgs: [remoteFilename]
+            detailsArgs: [syncResult.filename || '']
           });
 
-          const backupData = await downloadWebDAVBackup<OTPEntryInterface>(config.serverUrl, config.username, password, remoteFilename);
-          const allAccounts = [...entries, ...backupData.accounts];
-          const {
-            accounts: deduplicatedAccounts,
-            removedDuplicates,
-          } = dedupeAccountsBySecret(allAccounts, { duplicatePreference: 'last' });
-
-          const importCount = deduplicatedAccounts.length - entries.length;
-
-          await chrome.storage.local.set({ entries: deduplicatedAccounts, entriesLastModified: Date.now(), lastSyncedTimestamp: Date.now() });
           await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {
             messageKey: 'log_auto_sync_download_success',
             detailsKey: 'log_details_added_deduped',
-            detailsArgs: [String(importCount), String(removedDuplicates)]
+            detailsArgs: [
+              String(syncResult.summary?.newCount ?? 0),
+              String(syncResult.summary?.removedDuplicates ?? 0),
+            ]
           });
-        } else if (localTimestamp > remoteTimestamp) {
-          // Local is newer, upload | 本地更新，上传
+        } else if (syncResult.status === 'uploaded') {
           debugLog('[Auths Background] Local is newer, uploading...');
           await addLocalizedSyncLog('INFO', 'AUTO_BACKUP_TRIGGER', {
             messageKey: 'sync_uploading',
             detailsFallback: config.serverUrl
           });
 
-          // Deduplicate before upload | 上传前去重
-          const { accounts: deduplicatedEntries } = dedupeAccountsBySecret(entries);
-
-          // Update local if duplicates were removed | 如果有重复被移除则更新本地
-          if (deduplicatedEntries.length < entries.length) {
-            await chrome.storage.local.set({ entries: deduplicatedEntries, entriesLastModified: Date.now() });
+          if ((syncResult.removedDuplicates ?? 0) > 0) {
             await addLocalizedSyncLog('INFO', 'AUTO_BACKUP_TRIGGER', {
               messageKey: 'log_pre_upload_dedupe',
               detailsKey: 'log_details_removed_duplicates',
-              detailsArgs: [String(entries.length - deduplicatedEntries.length)]
+              detailsArgs: [String(syncResult.removedDuplicates)]
             });
           }
 
-          const filename = await uploadWebDAVBackup(config.serverUrl, config.username, password, deduplicatedEntries);
-          await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
           await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {
             messageKey: 'log_auto_backup_upload_success',
             detailsKey: 'log_details_file',
-            detailsArgs: [filename]
+            detailsArgs: [syncResult.filename || '']
           });
-
+        } else if (syncResult.status === 'conflict' && syncResult.conflict) {
+          debugLog('[Auths Background] Sync conflict detected, skipped automatic overwrite');
+          await addLocalizedSyncLog('WARN', 'BACKUP_FAILED', {
+            messageKey: 'sync_conflict_detected',
+            detailsKey: 'log_details_file',
+            detailsArgs: [syncResult.conflict.remoteFileName]
+          });
         } else {
-          // Already up to date | 已是最新
           debugLog('[Auths Background] Already up to date');
           await addLocalizedSyncLog('INFO', 'AUTO_BACKUP_TRIGGER', {
             messageKey: 'log_auto_backup_skipped',
             detailsKey: 'log_details_local_remote_up_to_date'
           });
-          await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
         }
 
         try {

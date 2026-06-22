@@ -979,7 +979,7 @@
     "description": "Server URL label."
   },
   "server_url_hint": {
-    "message": "完整的 WebDAV 目录地址",
+    "message": "完整的 HTTPS WebDAV 目录地址，仅本机 localhost 允许 HTTP",
     "description": "Hint for server url."
   },
   "username": {

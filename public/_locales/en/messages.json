@@ -979,7 +979,7 @@
         "description": "Server URL label."
     },
     "server_url_hint": {
-        "message": "Full WebDAV directory URL",
+        "message": "Full HTTPS WebDAV directory URL. HTTP is allowed only for localhost.",
         "description": "Hint for server url."
     },
     "username": {

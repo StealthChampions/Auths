@@ -13,8 +13,10 @@ import { useStyle, useMenu, useNotification, useAccounts } from '@/store';
 import { UserSettings } from '@/models/settings';
 import { addLocalizedSyncLog } from '@/utils/sync-logger';
 import { dedupeAccountsBySecret } from '@/utils/accounts';
+import { normalizeAccountList } from '@/utils/account-normalization';
 import { decryptWebDAVPassword, loadWebDAVConfig } from '@/utils/webdav-credentials';
-import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, uploadWebDAVBackup } from '@/utils/webdav-sync';
+import { runWebDAVSync } from '@/utils/webdav-sync-manager';
+import { cleanupExpiredWebDAVBackups } from '@/utils/webdav-sync';
 import { applyThemePreference, normalizeThemePreference, resolveThemePreference } from '@/utils/theme';
 import { debugError, debugLog } from '@/utils/logger';
 import MainHeader from '@/components/layout/MainHeader';
@@ -53,7 +55,7 @@ export default function Popup() {
       try {
         const result = await chrome.storage.local.get(['entries']);
         if (result.entries && Array.isArray(result.entries)) {
-          const entries = result.entries;
+          const { accounts: entries, invalidCount } = normalizeAccountList(result.entries);
 
           // Auto deduplicate on load | 加载时自动去重
           const {
@@ -63,8 +65,8 @@ export default function Popup() {
 
           // Update storage if duplicates were removed (don't update timestamp to avoid triggering sync)
           // 如果有重复被移除则更新存储（不更新时间戳以避免触发同步）
-          if (removedDuplicates > 0) {
-            debugLog(`[Auths] Auto cleanup: removed ${removedDuplicates} duplicate entries`);
+          if (removedDuplicates > 0 || invalidCount > 0) {
+            debugLog(`[Auths] Auto cleanup: removed ${removedDuplicates} duplicate entries and ${invalidCount} invalid entries`);
             await chrome.storage.local.set({ entries: deduplicatedEntries });
           }
 
@@ -120,63 +122,34 @@ export default function Popup() {
         if (config?.syncOnStartup && config?.serverUrl && config?.username && password) {
           debugLog('[Auths] Startup sync enabled, performing auto sync...');
 
-          // Get local data and timestamps | 获取本地数据和时间戳
-          const dataResult = await chrome.storage.local.get(['entries', 'entriesLastModified', 'lastSyncedTimestamp']);
-          const localEntries: OTPEntryInterface[] = dataResult.entries || [];
-          const localTimestamp = dataResult.entriesLastModified || 0;
-          const lastSyncedTimestamp = dataResult.lastSyncedTimestamp || 0;
+          const syncResult = await runWebDAVSync({
+            serverUrl: config.serverUrl,
+            username: config.username,
+            password,
+            onEntriesChanged: (entries) => accountsDispatch({ type: 'setEntries', payload: entries }),
+          });
 
-          // Skip if already synced and no local changes | 已同步且无本地变更则跳过
-          if (lastSyncedTimestamp > 0 && localTimestamp <= lastSyncedTimestamp) {
-            debugLog('[Auths] Startup sync: no local changes, checking remote...');
-          }
-
-          // Get remote latest backup | 获取远程最新备份
-          const latestRemote = await getLatestWebDAVBackup(config.serverUrl, config.username, password);
-
-          // Sync logic | 同步逻辑
-          if (latestRemote && latestRemote.timestamp > localTimestamp) {
-            // Remote is newer, download | 远程更新，下载
-            debugLog('[Auths] Startup sync: remote is newer, downloading...');
-            const backupData = await downloadWebDAVBackup<OTPEntryInterface>(config.serverUrl, config.username, password, latestRemote.name);
-            const allAccounts = [...localEntries, ...backupData.accounts];
-            const {
-              accounts: deduplicatedAccounts,
-              removedDuplicates: removedCount,
-            } = dedupeAccountsBySecret(allAccounts, { duplicatePreference: 'last' });
-
-            await chrome.storage.local.set({ entries: deduplicatedAccounts, entriesLastModified: Date.now(), lastSyncedTimestamp: Date.now() });
-            accountsDispatch({ type: 'setEntries', payload: deduplicatedAccounts });
+          if (syncResult.status === 'downloaded') {
             await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {
               messageKey: 'log_startup_sync_download_success',
               detailsKey: 'log_details_deduped',
-              detailsArgs: [String(removedCount)]
+              detailsArgs: [String(syncResult.summary?.removedDuplicates ?? 0)]
             });
-            debugLog(`[Auths] Startup sync: merged and deduplicated, removed ${removedCount} duplicates`);
-          } else if (localTimestamp > lastSyncedTimestamp && localEntries.length > 0) {
-            // Local has changes since last sync, upload | 本地自上次同步后有变更，上传
-            debugLog('[Auths] Startup sync: local has changes since last sync, uploading...');
-
-            const {
-              accounts: deduplicatedEntries,
-              removedDuplicates,
-            } = dedupeAccountsBySecret(localEntries);
-
-            if (removedDuplicates > 0) {
-              await chrome.storage.local.set({ entries: deduplicatedEntries, entriesLastModified: Date.now() });
-              accountsDispatch({ type: 'setEntries', payload: deduplicatedEntries });
-              debugLog(`[Auths] Startup sync: removed ${removedDuplicates} duplicates`);
-            }
-
-            const filename = await uploadWebDAVBackup(config.serverUrl, config.username, password, deduplicatedEntries);
-            await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
+            debugLog(`[Auths] Startup sync: downloaded and merged, removed ${syncResult.summary?.removedDuplicates ?? 0} duplicates`);
+          } else if (syncResult.status === 'uploaded') {
             await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {
               messageKey: 'log_startup_sync_upload_success',
               detailsKey: 'log_details_file',
-              detailsArgs: [filename]
+              detailsArgs: [syncResult.filename || '']
             });
-
             debugLog('[Auths] Startup sync: uploaded successfully');
+          } else if (syncResult.status === 'conflict' && syncResult.conflict) {
+            await addLocalizedSyncLog('WARN', 'BACKUP_FAILED', {
+              messageKey: 'sync_conflict_detected',
+              detailsKey: 'log_details_file',
+              detailsArgs: [syncResult.conflict.remoteFileName]
+            });
+            debugLog('[Auths] Startup sync: conflict detected, skipped automatic overwrite');
           } else {
             debugLog('[Auths] Startup sync: already up to date');
             await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {

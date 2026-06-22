@@ -47,6 +47,7 @@ Sensitive data is stored **locally** on your device:
 - **Settings and preferences**: Stored in your browser's local storage, or in browser sync storage if you choose the extension's sync storage option
 - **WebDAV configuration**: Non-sensitive WebDAV setup fields such as server URL, username, auto-backup status, backup frequency, retention policy, and startup sync preference may be stored in browser sync storage so setup can follow your browser account. The WebDAV password is encrypted before being stored locally, is not stored in browser sync storage, and the encryption key remains in your browser.
 - **WebDAV device ID and device name**: A random per-install device ID and an editable local device name are stored locally. New WebDAV backups include both in backup metadata, and include the device ID plus a sanitized device-name slug in the backup filename so backups can be identified while retention cleanup stays scoped to the current browser profile.
+- **Encrypted backup exports**: Password-protected local backup files are encrypted in the browser using AES-GCM with PBKDF2-SHA256. Older AES-CBC encrypted backup exports remain importable for compatibility.
 - **No account cloud storage by default**: Account secrets never leave your device unless you explicitly enable optional backup features
 
 **中文：**
@@ -56,6 +57,7 @@ Sensitive data is stored **locally** on your device:
 - **设置和偏好**：存储在浏览器的本地存储中；如果您选择扩展的同步存储选项，部分偏好会存储在浏览器同步存储中
 - **WebDAV 配置**：WebDAV 服务器地址、用户名、自动备份状态、备份频率、保留策略、启动同步偏好等非敏感配置可能会存储在浏览器同步存储中，以便配置跟随您的浏览器账号。WebDAV 密码会先加密再保存在本地，不会存储到浏览器同步存储中，加密密钥保留在您的浏览器中。
 - **WebDAV 设备 ID 和设备名称**：随机生成的每安装实例设备 ID 与可编辑的本地设备名称会保存在本地。新 WebDAV 备份会在备份元数据中包含这两项，并在备份文件名中包含设备 ID 与经过安全处理的设备名称片段，以便识别备份来源，同时保留策略仍只清理当前浏览器配置生成的备份。
+- **加密备份导出**：带密码的本地备份文件会在浏览器中使用 AES-GCM 与 PBKDF2-SHA256 加密。旧版 AES-CBC 加密备份仍可兼容导入。
 - **账户数据默认无云存储**：除非您明确启用可选备份功能，否则账户密钥不会离开您的设备
 
 ---
@@ -69,6 +71,7 @@ If you choose to enable WebDAV backup:
 - We do not have access to your WebDAV credentials or data
 - You are responsible for the security of your WebDAV server
 - Host permissions are requested **per-server** only when you configure backup
+- WebDAV server URLs must use HTTPS by default. Plain HTTP is allowed only for localhost testing.
 - Backup filenames include a local random device ID and, for new backups, a sanitized device-name slug so cleanup only removes backups created by the current browser profile and you can identify the backup source. Older legacy backup filenames remain readable/restorable and are not proactively deleted by the retention policy.
 
 **中文：**
@@ -78,6 +81,7 @@ If you choose to enable WebDAV backup:
 - 我们无法访问您的 WebDAV 凭据或数据
 - 您需要自行负责 WebDAV 服务器的安全
 - 仅在您配置备份时**按服务器**请求主机权限
+- WebDAV 服务器地址默认必须使用 HTTPS。明文 HTTP 仅允许用于 localhost 本机测试。
 - 备份文件名会包含本地随机设备 ID；新备份还会包含经过安全处理的设备名称片段，因此保留策略只删除当前浏览器配置创建的备份，同时您可以识别备份来源。旧版文件名的备份仍可读取/恢复，保留策略不会主动删除这些旧备份。
 
 ---
