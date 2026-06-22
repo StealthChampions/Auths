@@ -10,9 +10,11 @@ import { useI18n } from '@/i18n';
 import { useNotification, useAccounts } from '@/store';
 import { addLocalizedSyncLog, getLocalizedSyncLogText, getSyncLogs, clearSyncLogs, formatLogTime, type SyncLogEntry } from '@/utils/sync-logger';
 import { dedupeAccountsBySecret } from '@/utils/accounts';
-import { buildBackupMergePreview, normalizeBackupAccounts, type BackupMergePreview } from '@/utils/backup-preview';
+import { buildBackupMergePreview, type BackupMergePreview } from '@/utils/backup-preview';
+import { normalizeAccountList } from '@/utils/account-normalization';
 import { decryptWebDAVPassword, loadWebDAVConfig, saveLocalWebDAVConfigDraft, saveWebDAVConfig } from '@/utils/webdav-credentials';
-import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getLatestWebDAVBackup, getWebDAVDeviceId, getWebDAVDeviceName, listWebDAVBackups, setWebDAVDeviceName, uploadWebDAVBackup, type WebDAVBackupFile } from '@/utils/webdav-sync';
+import { resolveWebDAVSyncConflict, runWebDAVSync, type WebDAVSyncConflictResolution } from '@/utils/webdav-sync-manager';
+import { cleanupExpiredWebDAVBackups, downloadWebDAVBackup, getWebDAVDeviceId, getWebDAVDeviceName, listWebDAVBackups, setWebDAVDeviceName, uploadWebDAVBackup, validateWebDAVServerUrl, type WebDAVBackupFile } from '@/utils/webdav-sync';
 
 interface WebDAVProps {
     onClose: () => void;
@@ -41,13 +43,12 @@ interface RestorePreviewState {
 
 interface SyncConflictState {
     remoteFileName: string;
+    remoteTimestamp: number;
     remoteDate: string;
     remoteAccounts: OTPEntryInterface[];
     localAccounts: OTPEntryInterface[];
     summary: BackupMergePreview;
 }
-
-type SyncConflictResolution = 'merge' | 'local' | 'remote';
 
 const GlobeIcon = () => (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -112,7 +113,10 @@ const FieldHint = ({ text }: { text: string }) => (
  */
 async function ensureWebDAVPermission(url: string): Promise<boolean> {
     try {
-        const urlObj = new URL(url);
+        const validation = validateWebDAVServerUrl(url);
+        if (!validation.valid || !validation.normalizedUrl) return false;
+
+        const urlObj = new URL(validation.normalizedUrl);
         const origin = urlObj.origin + '/*';
 
         // Check if permission already granted | 检查是否已有权限
@@ -161,6 +165,20 @@ export default function WebDAV({ onClose }: WebDAVProps) {
     // Helper function to show toast messages | 显示 Toast 消息的辅助函数
     const showToast = (type: 'success' | 'error', text: string) => {
         notificationDispatch({ type, payload: text });
+    };
+
+    const getValidatedServerUrl = () => {
+        const validation = validateWebDAVServerUrl(serverUrl);
+        if (!validation.valid || !validation.normalizedUrl) {
+            showToast('error', t('invalid_server_url'));
+            return null;
+        }
+
+        if (validation.normalizedUrl !== serverUrl) {
+            setServerUrl(validation.normalizedUrl);
+        }
+
+        return validation.normalizedUrl;
     };
 
     // Helper function to refresh logs | 刷新日志的辅助函数
@@ -226,10 +244,10 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         }
     };
 
-    const applyRetentionPolicy = async () => {
+    const applyRetentionPolicy = async (targetServerUrl = serverUrl) => {
         let cleanup;
         try {
-            cleanup = await cleanupExpiredWebDAVBackups(serverUrl, username, password, retentionDays);
+            cleanup = await cleanupExpiredWebDAVBackups(targetServerUrl, username, password, retentionDays);
         } catch (error) {
             await addLocalizedSyncLog('WARN', 'BACKUP_SUCCESS', {
                 messageKey: 'retention_cleanup_failed',
@@ -260,9 +278,11 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             showToast('error', t('configure_webdav_first'));
             return;
         }
+        const validatedServerUrl = getValidatedServerUrl();
+        if (!validatedServerUrl) return;
 
         // Ensure permission before fetching | 获取前先确保有权限
-        if (!await ensureWebDAVPermission(serverUrl)) {
+        if (!await ensureWebDAVPermission(validatedServerUrl)) {
             showToast('error', t('permission_denied'));
             return;
         }
@@ -272,27 +292,13 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         try {
             const activeDeviceId = currentDeviceId || await getWebDAVDeviceId();
             setCurrentDeviceId(activeDeviceId);
-            await applyRetentionPolicy();
-            const files = (await listWebDAVBackups(serverUrl, username, password)).sort((a, b) => b.timestamp - a.timestamp);
-            const history = await Promise.all(files.map(async (file): Promise<BackupHistoryItem> => {
-                try {
-                    const backupData = await downloadWebDAVBackup<OTPEntryInterface>(serverUrl, username, password, file.name);
-                    const backupTimestamp = backupData.timestamp || file.timestamp;
-                    return {
-                        ...file,
-                        backupTimestamp,
-                        accountCount: backupData.accounts.length,
-                        displayDeviceName: getDisplayDeviceName(file, backupData.deviceName),
-                        date: formatBackupDate(backupTimestamp),
-                    };
-                } catch {
-                    return {
-                        ...file,
-                        backupTimestamp: file.timestamp,
-                        displayDeviceName: getDisplayDeviceName(file),
-                        date: formatBackupDate(file.timestamp),
-                    };
-                }
+            await applyRetentionPolicy(validatedServerUrl);
+            const files = (await listWebDAVBackups(validatedServerUrl, username, password)).sort((a, b) => b.timestamp - a.timestamp);
+            const history = files.map((file): BackupHistoryItem => ({
+                ...file,
+                backupTimestamp: file.timestamp,
+                displayDeviceName: getDisplayDeviceName(file),
+                date: formatBackupDate(file.timestamp),
             }));
 
             setBackupFiles(history);
@@ -315,9 +321,11 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             showToast('error', t('configure_webdav_first'));
             return;
         }
+        const validatedServerUrl = getValidatedServerUrl();
+        if (!validatedServerUrl) return;
 
         // Ensure permission before restoring | 恢复前先确保有权限
-        if (!await ensureWebDAVPermission(serverUrl)) {
+        if (!await ensureWebDAVPermission(validatedServerUrl)) {
             showToast('error', t('permission_denied'));
             return;
         }
@@ -325,19 +333,24 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         setRestoreLoading(true);
 
         try {
-            const backupData = await downloadWebDAVBackup<OTPEntryInterface>(serverUrl, username, password, file.name);
+            const backupData = await downloadWebDAVBackup<OTPEntryInterface>(validatedServerUrl, username, password, file.name);
+            const normalizedBackup = normalizeAccountList(backupData.accounts);
             const result = await chrome.storage.local.get(['entries']);
             const existingAccounts: OTPEntryInterface[] = result.entries || [];
-            const summary = buildBackupMergePreview(existingAccounts, backupData.accounts);
+            const summary = buildBackupMergePreview(existingAccounts, normalizedBackup.accounts);
+            const loadedFile = {
+                ...file,
+                accountCount: normalizedBackup.accounts.length,
+                backupTimestamp: backupData.timestamp || file.backupTimestamp || file.timestamp,
+                displayDeviceName: getDisplayDeviceName(file, backupData.deviceName),
+                date: formatBackupDate(backupData.timestamp || file.backupTimestamp || file.timestamp),
+            };
+            const updatedBackupFiles = backupFiles.map((item) => item.name === file.name ? loadedFile : item);
+            setBackupFiles(updatedBackupFiles);
+            buildDeviceHistory(updatedBackupFiles);
             setRestorePreview({
-                file: {
-                    ...file,
-                    accountCount: backupData.accounts.length,
-                    backupTimestamp: backupData.timestamp || file.backupTimestamp || file.timestamp,
-                    displayDeviceName: getDisplayDeviceName(file, backupData.deviceName),
-                    date: formatBackupDate(backupData.timestamp || file.backupTimestamp || file.timestamp),
-                },
-                accounts: backupData.accounts,
+                file: loadedFile,
+                accounts: normalizedBackup.accounts,
                 summary,
             });
         } catch (err) {
@@ -397,10 +410,12 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             return;
         }
 
+        const validatedServerUrl = getValidatedServerUrl();
+        if (!validatedServerUrl) return;
+
         // Validate URL format | 验证 URL 格式
         try {
             await persistDeviceName();
-            new URL(serverUrl);
         } catch {
             showToast('error', t('invalid_server_url'));
             return;
@@ -409,7 +424,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         // Save form data BEFORE requesting permission to prevent data loss
         // 在请求权限之前保存表单数据，防止数据丢失
         await saveLocalWebDAVConfigDraft({
-            serverUrl,
+            serverUrl: validatedServerUrl,
             username,
             autoBackup,
             backupInterval: parseInt(backupInterval),
@@ -418,13 +433,13 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         }, password);
 
         // Request permission for WebDAV server | 请求 WebDAV 服务器访问权限
-        if (!await ensureWebDAVPermission(serverUrl)) {
+        if (!await ensureWebDAVPermission(validatedServerUrl)) {
             showToast('error', t('permission_denied'));
             return;
         }
 
         await saveWebDAVConfig({
-            serverUrl,
+            serverUrl: validatedServerUrl,
             username,
             autoBackup,
             backupInterval: parseInt(backupInterval),
@@ -455,7 +470,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             messageKey: 'log_config_saved',
             detailsKey: autoBackup ? 'log_details_auto_backup_enabled' : 'log_details_auto_backup_disabled'
         });
-        await applyRetentionPolicy();
+        await applyRetentionPolicy(validatedServerUrl);
         showToast('success', t('config_saved'));
         await refreshLogs();
     };
@@ -466,9 +481,11 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             showToast('error', t('configure_webdav_first'));
             return;
         }
+        const validatedServerUrl = getValidatedServerUrl();
+        if (!validatedServerUrl) return;
 
         // Ensure permission before backup | 备份前先确保有权限
-        if (!await ensureWebDAVPermission(serverUrl)) {
+        if (!await ensureWebDAVPermission(validatedServerUrl)) {
             showToast('error', t('permission_denied'));
             return;
         }
@@ -476,7 +493,7 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         setLoading(true);
         await addLocalizedSyncLog('INFO', 'BACKUP_START', {
             messageKey: 'log_backup_start',
-            detailsFallback: serverUrl
+            detailsFallback: validatedServerUrl
         });
 
         try {
@@ -509,8 +526,8 @@ export default function WebDAV({ onClose }: WebDAVProps) {
                 entries = deduplicatedEntries;
             }
 
-            const filename = await uploadWebDAVBackup(serverUrl, username, password, entries);
-            await applyRetentionPolicy();
+            const filename = await uploadWebDAVBackup(validatedServerUrl, username, password, entries);
+            await applyRetentionPolicy(validatedServerUrl);
 
             await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {
                 messageKey: 'log_backup_success',
@@ -537,8 +554,10 @@ export default function WebDAV({ onClose }: WebDAVProps) {
             showToast('error', t('configure_webdav_first'));
             return;
         }
+        const validatedServerUrl = getValidatedServerUrl();
+        if (!validatedServerUrl) return;
 
-        if (!await ensureWebDAVPermission(serverUrl)) {
+        if (!await ensureWebDAVPermission(validatedServerUrl)) {
             showToast('error', t('permission_denied'));
             return;
         }
@@ -550,63 +569,36 @@ export default function WebDAV({ onClose }: WebDAVProps) {
 
         try {
             await persistDeviceName();
-            // 1. Get local data and its timestamp | 获取本地数据及其时间戳
-            const localResult = await chrome.storage.local.get(['entries', 'entriesLastModified', 'lastSyncedTimestamp']);
-            const localEntries: OTPEntryInterface[] = localResult.entries || [];
-            const localTimestamp = localResult.entriesLastModified || 0;
-            const lastSyncedTimestamp = localResult.lastSyncedTimestamp || 0;
+            const result = await runWebDAVSync({
+                serverUrl: validatedServerUrl,
+                username,
+                password,
+                onEntriesChanged: (entries) => accountsDispatch({ type: 'setEntries', payload: entries }),
+            });
 
-            // 2. Get remote latest backup file info | 获取远程最新备份文件信息
-            const latestRemoteFile = await getLatestWebDAVBackup(serverUrl, username, password);
-
-            // 3. Compare and sync | 对比并同步
-            if (!latestRemoteFile) {
-                // No remote backup, upload local | 没有远程备份，上传本地
-                if (localEntries.length > 0) {
-                    showToast('success', t('sync_uploading'));
-                    await performUpload(localEntries);
-                } else {
-                    showToast('success', t('sync_up_to_date'));
-                }
-            } else if (
-                latestRemoteFile.timestamp > lastSyncedTimestamp &&
-                localTimestamp > lastSyncedTimestamp &&
-                localEntries.length > 0
-            ) {
-                const backupData = await downloadWebDAVBackup<OTPEntryInterface>(serverUrl, username, password, latestRemoteFile.name);
-                const summary = buildBackupMergePreview(localEntries, backupData.accounts);
+            if (result.status === 'conflict' && result.conflict) {
                 setSyncConflict({
-                    remoteFileName: latestRemoteFile.name,
-                    remoteDate: formatBackupDate(backupData.timestamp || latestRemoteFile.timestamp),
-                    remoteAccounts: backupData.accounts,
-                    localAccounts: localEntries,
-                    summary,
+                    ...result.conflict,
+                    remoteDate: formatBackupDate(result.conflict.remoteTimestamp),
                 });
                 showToast('error', t('sync_conflict_detected'));
                 await addLocalizedSyncLog('WARN', 'BACKUP_FAILED', {
                     messageKey: 'sync_conflict_detected',
                     detailsKey: 'log_details_file',
-                    detailsArgs: [latestRemoteFile.name]
+                    detailsArgs: [result.conflict.remoteFileName]
                 });
                 return;
-            } else if (localTimestamp === 0 && localEntries.length === 0) {
-                // No local data, download remote | 没有本地数据，下载远程
+            }
+
+            if (result.status === 'downloaded') {
                 showToast('success', t('sync_downloading'));
-                await performDownload(latestRemoteFile.name);
-            } else if (latestRemoteFile.timestamp > localTimestamp) {
-                // Remote is newer, download | 远程更新，下载
-                showToast('success', t('sync_downloading'));
-                await performDownload(latestRemoteFile.name);
-            } else if (localTimestamp > latestRemoteFile.timestamp) {
-                // Local is newer, upload | 本地更新，上传
+            } else if (result.status === 'uploaded') {
                 showToast('success', t('sync_uploading'));
-                await performUpload(localEntries);
             } else {
-                // Same timestamp, up to date | 时间相同，已是最新
                 showToast('success', t('sync_up_to_date'));
             }
 
-            await applyRetentionPolicy();
+            await applyRetentionPolicy(validatedServerUrl);
             await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {
                 messageKey: 'sync_complete'
             });
@@ -624,63 +616,20 @@ export default function WebDAV({ onClose }: WebDAVProps) {
         }
     };
 
-    // Helper: perform upload | 辅助函数：执行上传
-    const performUpload = async (entries: OTPEntryInterface[]) => {
-        await persistDeviceName();
-        await uploadWebDAVBackup(serverUrl, username, password, entries);
-        await applyRetentionPolicy();
-        // Update local timestamp | 更新本地时间戳
-        await chrome.storage.local.set({ entriesLastModified: Date.now() });
-    };
-
-    // Helper: perform download and merge | 辅助函数：执行下载并合并
-    const performDownload = async (filename: string) => {
-        const backupData = await downloadWebDAVBackup<OTPEntryInterface>(serverUrl, username, password, filename);
-
-        // Merge accounts | 合并账户
-        const localResult = await chrome.storage.local.get(['entries']);
-        const existingAccounts: OTPEntryInterface[] = localResult.entries || [];
-
-        // First merge all accounts | 先合并所有账户
-        const allAccounts = [...existingAccounts, ...backupData.accounts];
-
-        // Then deduplicate | 然后去重
-        const { accounts: deduplicatedAccounts } = dedupeAccountsBySecret(allAccounts, { duplicatePreference: 'last' });
-
-        await chrome.storage.local.set({
-            entries: deduplicatedAccounts,
-            entriesLastModified: Date.now()
-        });
-
-        // Update global state | 更新全局状态
-        accountsDispatch({ type: 'setEntries', payload: deduplicatedAccounts });
-    };
-
-    const resolveSyncConflict = async (resolution: SyncConflictResolution) => {
+    const resolveSyncConflict = async (resolution: WebDAVSyncConflictResolution) => {
         if (!syncConflict) return;
+        const validatedServerUrl = getValidatedServerUrl();
+        if (!validatedServerUrl) return;
 
         setSyncing(true);
         try {
-            let nextEntries: OTPEntryInterface[];
-
-            if (resolution === 'merge') {
-                nextEntries = syncConflict.summary.mergedAccounts;
-                await chrome.storage.local.set({ entries: nextEntries, entriesLastModified: Date.now() });
-                accountsDispatch({ type: 'setEntries', payload: nextEntries });
-                await uploadWebDAVBackup(serverUrl, username, password, nextEntries);
-            } else if (resolution === 'local') {
-                nextEntries = normalizeBackupAccounts(syncConflict.localAccounts);
-                await chrome.storage.local.set({ entries: nextEntries, entriesLastModified: Date.now() });
-                accountsDispatch({ type: 'setEntries', payload: nextEntries });
-                await uploadWebDAVBackup(serverUrl, username, password, nextEntries);
-            } else {
-                nextEntries = normalizeBackupAccounts(syncConflict.remoteAccounts);
-                await chrome.storage.local.set({ entries: nextEntries, entriesLastModified: Date.now() });
-                accountsDispatch({ type: 'setEntries', payload: nextEntries });
-            }
-
-            await chrome.storage.local.set({ lastSyncedTimestamp: Date.now() });
-            await applyRetentionPolicy();
+            await resolveWebDAVSyncConflict({
+                serverUrl: validatedServerUrl,
+                username,
+                password,
+                onEntriesChanged: (entries) => accountsDispatch({ type: 'setEntries', payload: entries }),
+            }, syncConflict, resolution);
+            await applyRetentionPolicy(validatedServerUrl);
             await addLocalizedSyncLog('INFO', 'BACKUP_SUCCESS', {
                 messageKey: 'sync_conflict_resolved',
                 detailsKey: resolution === 'merge'

@@ -2067,54 +2067,6 @@
   width: 100%;
 }
 
-.select-control {
-  position: relative;
-  display: block;
-  width: 100%;
-  min-width: 0;
-}
-
-.select-control > select {
-  width: 100%;
-}
-
-.webdav-modal .select-control > select {
-  padding-right: 30px;
-}
-
-.webdav-policy-grid .select-control > select {
-  padding-right: 28px;
-}
-
-.select-control::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  right: 13px;
-  width: 7px;
-  height: 7px;
-  border-right: 2px solid var(--color-text-secondary);
-  border-bottom: 2px solid var(--color-text-secondary);
-  transform: translateY(-65%) rotate(45deg);
-  pointer-events: none;
-  opacity: 0.9;
-}
-
-.select-control:focus-within::after {
-  border-color: var(--color-primary);
-}
-
-.form-group select,
-.setting-item select,
-.form-select {
-  padding-right: 30px;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: none;
-  text-align: left;
-  cursor: pointer;
-}
-
 .backup-list {
   margin-top: 10px;
   padding: 10px;

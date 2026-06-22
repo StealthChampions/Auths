@@ -181,6 +181,7 @@ export class Encryption implements EncryptionInterface {
  */
 export class SecureHash {
   private static readonly HASH_ITERATIONS = 100000;
+  private static readonly BACKUP_ENCRYPTION_VERSION = 2;
 
   /**
    * 生成密码哈希 (用于存储验证)
@@ -220,9 +221,10 @@ export class SecureHash {
   }
 
   /**
-   * 加密敏感数据 (如 WebDAV 凭据)
+   * Encrypt password-protected backup exports.
+   * 加密带密码的备份导出。
    */
-  static encryptData(data: string, masterPassword: string): string {
+  private static encryptDataLegacy(data: string, masterPassword: string): string {
     const salt = CryptoJS.lib.WordArray.random(128 / 8).toString();
     const iv = CryptoJS.lib.WordArray.random(128 / 8);
     const key = CryptoJS.PBKDF2(masterPassword, salt, {
@@ -240,10 +242,73 @@ export class SecureHash {
     return `${salt}:${iv.toString(CryptoJS.enc.Base64)}:${encrypted.ciphertext.toString(CryptoJS.enc.Base64)}`;
   }
 
-  /**
-   * 解密敏感数据
-   */
-  static decryptData(encryptedData: string, masterPassword: string): string | null {
+  private static arrayBufferToBase64(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (const byte of bytes) {
+      binary += String.fromCharCode(byte);
+    }
+    return btoa(binary);
+  }
+
+  private static base64ToArrayBuffer(value: string): ArrayBuffer {
+    const binary = atob(value);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  private static async deriveAesGcmKey(password: string, salt: ArrayBuffer, iterations: number): Promise<CryptoKey> {
+    const baseKey = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(password),
+      'PBKDF2',
+      false,
+      ['deriveKey']
+    );
+
+    return crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt,
+        iterations,
+        hash: 'SHA-256',
+      },
+      baseKey,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+  }
+
+  static async encryptData(data: string, masterPassword: string): Promise<string> {
+    if (!crypto.subtle) {
+      return this.encryptDataLegacy(data, masterPassword);
+    }
+
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await this.deriveAesGcmKey(masterPassword, salt.buffer, this.HASH_ITERATIONS);
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      new TextEncoder().encode(data)
+    );
+
+    return JSON.stringify({
+      version: this.BACKUP_ENCRYPTION_VERSION,
+      algorithm: 'AES-GCM',
+      kdf: 'PBKDF2-SHA256',
+      iterations: this.HASH_ITERATIONS,
+      salt: this.arrayBufferToBase64(salt.buffer),
+      iv: this.arrayBufferToBase64(iv.buffer),
+      ciphertext: this.arrayBufferToBase64(ciphertext),
+    });
+  }
+
+  private static decryptDataLegacy(encryptedData: string, masterPassword: string): string | null {
     try {
       const parts = encryptedData.split(':');
       if (parts.length !== 3) {
@@ -272,6 +337,39 @@ export class SecureHash {
       return decrypted.toString(CryptoJS.enc.Utf8);
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * 解密敏感数据
+   */
+  static async decryptData(encryptedData: string, masterPassword: string): Promise<string | null> {
+    try {
+      const payload = JSON.parse(encryptedData);
+      if (
+        payload?.version !== this.BACKUP_ENCRYPTION_VERSION ||
+        payload?.algorithm !== 'AES-GCM' ||
+        typeof payload.salt !== 'string' ||
+        typeof payload.iv !== 'string' ||
+        typeof payload.ciphertext !== 'string'
+      ) {
+        return this.decryptDataLegacy(encryptedData, masterPassword);
+      }
+
+      const iterations = Number(payload.iterations) || this.HASH_ITERATIONS;
+      const salt = this.base64ToArrayBuffer(payload.salt);
+      const iv = this.base64ToArrayBuffer(payload.iv);
+      const ciphertext = this.base64ToArrayBuffer(payload.ciphertext);
+      const key = await this.deriveAesGcmKey(masterPassword, salt, iterations);
+      const decrypted = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv },
+        key,
+        ciphertext
+      );
+
+      return new TextDecoder().decode(decrypted);
+    } catch {
+      return this.decryptDataLegacy(encryptedData, masterPassword);
     }
   }
 }

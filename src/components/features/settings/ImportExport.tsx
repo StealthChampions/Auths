@@ -10,6 +10,7 @@ import { useNotification, useAccounts } from '@/store';
 import { useI18n } from '@/i18n';
 import { SecureHash } from '@/models/encryption';
 import { buildBackupMergePreview, type BackupMergePreview } from '@/utils/backup-preview';
+import { normalizeAccountList } from '@/utils/account-normalization';
 import { formatLocalDate } from '@/utils/date';
 
 interface ImportExportProps {
@@ -87,7 +88,7 @@ export default function ImportExport({ onClose }: ImportExportProps) {
         // Encrypt the accounts data if password provided
         // 如果提供了密码则加密数据
         const accountsJson = JSON.stringify(accounts);
-        const encryptedData = SecureHash.encryptData(accountsJson, exportPassword);
+        const encryptedData = await SecureHash.encryptData(accountsJson, exportPassword);
 
         backupData = {
           version: '1.0',
@@ -132,14 +133,14 @@ export default function ImportExport({ onClose }: ImportExportProps) {
     const text = await importFile.text();
     const backupData = JSON.parse(text);
 
-    let accounts;
+    let accounts: unknown;
     if (backupData.encrypted && backupData.data) {
       if (!importPassword) {
         showToast('error', t('enter_decrypt_password'));
         return null;
       }
 
-      const decryptedJson = SecureHash.decryptData(backupData.data, importPassword);
+      const decryptedJson = await SecureHash.decryptData(backupData.data, importPassword);
       if (!decryptedJson) {
         showToast('error', t('decrypt_failed'));
         return null;
@@ -158,12 +159,13 @@ export default function ImportExport({ onClose }: ImportExportProps) {
       return null;
     }
 
-    if (!Array.isArray(accounts)) {
+    const normalized = normalizeAccountList(accounts);
+    if (normalized.accounts.length === 0) {
       showToast('error', t('format_error'));
       return null;
     }
 
-    return accounts as OTPEntryInterface[];
+    return normalized.accounts;
   };
 
   const prepareImportPreview = async () => {

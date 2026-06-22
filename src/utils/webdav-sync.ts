@@ -22,13 +22,60 @@ export interface WebDAVCleanupResult {
   skipped: boolean;
 }
 
+export interface WebDAVUrlValidationResult {
+  valid: boolean;
+  normalizedUrl?: string;
+  reason?: 'invalid_url' | 'unsupported_protocol';
+}
+
+function isLocalHttpHost(hostname: string): boolean {
+  const normalizedHostname = hostname.toLowerCase();
+  return ['localhost', '127.0.0.1', '::1', '[::1]'].includes(normalizedHostname);
+}
+
+function encodeUtf8Base64(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  const chunkSize = 0x8000;
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return btoa(binary);
+}
+
 export function getWebDAVAuthHeader(username: string, password: string): string {
-  return 'Basic ' + btoa(`${username}:${password}`);
+  return 'Basic ' + encodeUtf8Base64(`${username}:${password}`);
+}
+
+export function validateWebDAVServerUrl(serverUrl: string): WebDAVUrlValidationResult {
+  try {
+    const url = new URL(serverUrl.trim());
+    if (url.protocol === 'https:' || (url.protocol === 'http:' && isLocalHttpHost(url.hostname))) {
+      return { valid: true, normalizedUrl: url.toString() };
+    }
+
+    return { valid: false, reason: 'unsupported_protocol' };
+  } catch {
+    return { valid: false, reason: 'invalid_url' };
+  }
+}
+
+function getValidatedWebDAVServerUrl(serverUrl: string): string {
+  const validation = validateWebDAVServerUrl(serverUrl);
+  if (!validation.valid || !validation.normalizedUrl) {
+    throw new Error('Invalid WebDAV server URL');
+  }
+
+  return validation.normalizedUrl;
 }
 
 export function getWebDAVFileUrl(serverUrl: string, filename: string): string {
+  const validatedServerUrl = getValidatedWebDAVServerUrl(serverUrl);
   const encodedFilename = encodeURIComponent(filename);
-  return serverUrl.endsWith('/') ? `${serverUrl}${encodedFilename}` : `${serverUrl}/${encodedFilename}`;
+  return validatedServerUrl.endsWith('/') ? `${validatedServerUrl}${encodedFilename}` : `${validatedServerUrl}/${encodedFilename}`;
 }
 
 const WEBDAV_DEVICE_ID_KEY = 'webdavDeviceId';
@@ -177,7 +224,8 @@ export async function listWebDAVBackups(
   username: string,
   password: string
 ): Promise<WebDAVBackupFile[]> {
-  const response = await fetch(serverUrl, {
+  const validatedServerUrl = getValidatedWebDAVServerUrl(serverUrl);
+  const response = await fetch(validatedServerUrl, {
     method: 'PROPFIND',
     headers: {
       'Authorization': getWebDAVAuthHeader(username, password),

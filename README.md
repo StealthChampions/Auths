@@ -13,7 +13,7 @@
 ## ✨ Features
 
 - **Modern UI**: Clean design with dark mode support and smooth transitions.
-- **Secure Storage**: Data is encrypted locally using **AES-256** and **Argon2** hashing. Keys never leave your device unencrypted.
+- **Secure Storage**: Data stays local. When app encryption is enabled, secrets use **AES-256-CBC with PBKDF2-SHA256**; password-protected backup exports use **AES-256-GCM with PBKDF2-SHA256**.
 - **Organized**: Group accounts into folders with custom icons. The **Smart Filter** shows relevant accounts for the current website.
 - **Brand Icons**: Automatically matches icons for popular services.
 - **Real-time TOTP**: Accurate code generation with progress indicators.
@@ -27,7 +27,7 @@
 - **Framework**: [WXT](https://wxt.dev) (Web Extension Tools)
 - **UI Library**: [React 18](https://reactjs.org/)
 - **Styling**: SCSS / CSS Variables
-- **Cryptography**: `crypto-js`, `argon2-browser`
+- **Cryptography**: Web Crypto API, `crypto-js`
 - **QR Code**: `jsqr`
 - **State Management**: React Context + Hooks
 
@@ -72,7 +72,7 @@
 ## 🔒 Security
 
 We take security seriously. 
-- **Local Encryption**: Your vault is encrypted with a master password using Argon2 for key derivation and AES for encryption.
+- **Local Encryption**: App encryption uses PBKDF2-SHA256 for key derivation and AES for encryption. New password-protected backup exports use AES-GCM; older AES-CBC backup exports remain importable.
 - **No Tracking**: We do not collect any personal data or usage analytics.
 - **Vulnerability Reporting**: Please refer to our [Security Policy](SECURITY.md) for reporting vulnerabilities.
 
