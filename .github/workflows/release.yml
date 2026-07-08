@@ -60,12 +60,16 @@ jobs:
       - name: Build & zip Firefox
         run: npm run zip:firefox
 
+      - name: Build & zip Edge
+        run: npm run zip:edge
+
       - name: Rename artifacts
         run: |
           VERSION=${{ needs.check-version.outputs.version }}
           PKG_VERSION=$(node -p "require('./package.json').version")
           cp ".output/auths-${PKG_VERSION}-chrome.zip" ".output/auths-chrome-${VERSION}.zip"
           cp ".output/auths-${PKG_VERSION}-firefox.zip" ".output/auths-firefox-${VERSION}.zip"
+          cp ".output/auths-${PKG_VERSION}-edge.zip" ".output/auths-edge-${VERSION}.zip"
 
       - name: Create tag and GitHub Release
         uses: softprops/action-gh-release@v2
@@ -76,3 +80,4 @@ jobs:
           files: |
             .output/auths-chrome-${{ needs.check-version.outputs.version }}.zip
             .output/auths-firefox-${{ needs.check-version.outputs.version }}.zip
+            .output/auths-edge-${{ needs.check-version.outputs.version }}.zip
