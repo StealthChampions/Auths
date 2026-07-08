@@ -2,14 +2,44 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+    paths:
+      - 'package.json'
 
 permissions:
   contents: write
 
 jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if version tag exists
+        id: check
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v${VERSION}"
+          echo "version=${TAG}" >> "$GITHUB_OUTPUT"
+
+          if git rev-parse "${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists, skipping release."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag ${TAG} does not exist, will create release."
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
   release:
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -30,21 +60,19 @@ jobs:
       - name: Build & zip Firefox
         run: npm run zip:firefox
 
-      - name: Get version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-
       - name: Rename artifacts
         run: |
-          VERSION=${{ steps.version.outputs.VERSION }}
+          VERSION=${{ needs.check-version.outputs.version }}
           PKG_VERSION=$(node -p "require('./package.json').version")
           cp ".output/auths-${PKG_VERSION}-chrome.zip" ".output/auths-chrome-${VERSION}.zip"
           cp ".output/auths-${PKG_VERSION}-firefox.zip" ".output/auths-firefox-${VERSION}.zip"
 
-      - name: Create GitHub Release
+      - name: Create tag and GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.check-version.outputs.version }}
+          name: ${{ needs.check-version.outputs.version }}
           generate_release_notes: true
           files: |
-            .output/auths-chrome-${{ steps.version.outputs.VERSION }}.zip
-            .output/auths-firefox-${{ steps.version.outputs.VERSION }}.zip
+            .output/auths-chrome-${{ needs.check-version.outputs.version }}.zip
+            .output/auths-firefox-${{ needs.check-version.outputs.version }}.zip
