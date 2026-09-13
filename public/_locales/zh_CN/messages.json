@@ -119,22 +119,6 @@
     "message": "安全",
     "description": "Security."
   },
-  "current_phrase": {
-    "message": "当前密码",
-    "description": "Current Passphrase."
-  },
-  "new_phrase": {
-    "message": "新密码",
-    "description": "New Passphrase."
-  },
-  "phrase": {
-    "message": "密码",
-    "description": "Passphrase."
-  },
-  "confirm_phrase": {
-    "message": "确认密码",
-    "description": "Confirm Passphrase."
-  },
   "confirm_delete": {
     "message": "您确定要删除此密钥吗？该操作无法撤销。",
     "description": "Remove entry confirmation"
@@ -149,25 +133,13 @@
   "delete_all_warning": {
     "message": "这将删除所有数据并完全重置身份验证器。 任何已删除的数据都无法恢复！在重置身份验证器之前您应保存备份。"
   },
-  "security_warning": {
-    "message": "您的账户数据将使用此密码进行加密。如果您忘记了密码没有人能够提供帮助。",
-    "description": "Passphrase Warning."
-  },
   "update": {
     "message": "更新",
     "description": "Update."
   },
-  "phrase_incorrect": {
-    "message": "部分账户与密码不匹配，您无法添加新账户或者更改密码。请提供正确的密码后重试。",
-    "description": "Passphrase Incorrect."
-  },
   "phrase_incorrect_export": {
     "message": "备份文件不会包含无法解密的账号。",
     "description": "Skip Unable-decripted Data."
-  },
-  "phrase_not_match": {
-    "message": "密码不匹配。",
-    "description": "Passphrase Not Match."
   },
   "encrypted": {
     "message": "已加密",
@@ -197,17 +169,9 @@
     "message": "源代码",
     "description": "Source Code."
   },
-  "passphrase_info": {
-    "message": "输入密码以解码账户数据。",
-    "description": "Passphrase Info"
-  },
   "sync_clock": {
     "message": "通过Google校准时间",
     "description": "Sync Clock"
-  },
-  "remember_phrase": {
-    "message": "记住密码",
-    "description": "Remember Passphrase"
   },
   "clock_too_far_off": {
     "message": "注意！您的本地时钟时间差过大，请修正后再进行操作。",
@@ -289,10 +253,6 @@
     "message": "您必须提供正确的密码才能导入备份。",
     "description": "Error password warning when import backups."
   },
-  "local_passphrase_warning": {
-    "message": "您的密码保存在了本地，请立即通过安全菜单更改密码。",
-    "description": "localStorage password warning."
-  },
   "remove": {
     "message": "移除",
     "description": "Remove password."
@@ -364,9 +324,6 @@
   "loading": {
     "message": "正在载入..."
   },
-  "autolock": {
-    "message": "在"
-  },
   "minutes": {
     "message": "分钟后自动锁定"
   },
@@ -405,9 +362,6 @@
   },
   "advisor_insight_password_not_set": {
     "message": "设置密码以保护您的数据。"
-  },
-  "advisor_insight_auto_lock_not_set": {
-    "message": "启用自动锁定来保护您的数据。"
   },
   "advisor_insight_browser_sync_not_enabled": {
     "message": "浏览器同步已被禁用。启用它以允许跨浏览器的帐户同步。"
@@ -529,9 +483,6 @@
   "password_protection": {
     "message": "密码保护"
   },
-  "auto_lock": {
-    "message": "自动锁定"
-  },
   "disabled": {
     "message": "禁用"
   },
@@ -540,9 +491,6 @@
   },
   "hour": {
     "message": "小时"
-  },
-  "auto_lock_description": {
-    "message": "在一段时间不活动后自动锁定扩展"
   },
   "reset_password": {
     "message": "重置密码"
