@@ -80,6 +80,7 @@ interface EntryComponentProps {
   notSearched?: boolean;
   tabindex?: number;
   onEdit?: (entry: OTPEntryInterface) => void;
+  onDelete?: (entry: OTPEntryInterface) => void;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
   onDragEnd?: (e: React.DragEvent) => void;
@@ -102,6 +103,7 @@ export default function EntryComponent({
   notSearched = false,
   tabindex = -1,
   onEdit,
+  onDelete,
   draggable = false,
   onDragStart,
   onDragEnd,
@@ -225,7 +227,14 @@ export default function EntryComponent({
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm(t('delete_confirm').replace('{name}', entry.issuer))) {
+    if (!confirm(t('delete_confirm').replace('{name}', entry.issuer))) {
+      return;
+    }
+    if (onDelete) {
+      // Delegate to parent (MainBody) which schedules an undo window
+      // before committing the deletion to storage.
+      onDelete(entry);
+    } else {
       dispatch({ type: 'deleteCode', payload: entry.hash });
     }
   };

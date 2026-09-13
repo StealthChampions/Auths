@@ -18,6 +18,7 @@ interface UserSettingsData {
   // Local settings | 本地设置
   offset?: number;
   storageLocation?: StorageLocation;
+  notificationsEnabled?: boolean;
 
   // Syncable settings | 可同步设置
   clipboardClearSeconds?: number;
@@ -31,6 +32,7 @@ interface UserSettingsData {
 const LocalUserSettingsDataKeys = [
   "offset",
   "storageLocation",
+  "notificationsEnabled",
 ];
 
 export class UserSettings {
@@ -154,12 +156,12 @@ export class UserSettings {
   }
 }
 
-type BooleanOption = "smartFilter";
+type BooleanOption = "smartFilter" | "notificationsEnabled";
 
 type NumberOption = "clipboardClearSeconds" | "offset";
 
 function isBooleanOption(key: string): key is BooleanOption {
-  return ["smartFilter"].includes(key);
+  return ["smartFilter", "notificationsEnabled"].includes(key);
 }
 
 function isNumberOption(key: string): key is NumberOption {

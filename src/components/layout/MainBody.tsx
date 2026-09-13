@@ -8,11 +8,12 @@
  * 处理账户过滤、排序和基于当前网站的智能过滤。
  */
 
-import React, { Suspense, useState, useRef, useEffect } from 'react';
+import React, { Suspense, useState, useRef, useEffect, useCallback } from 'react';
 import { useAccounts, useStyle, useNotification, useMenu } from '@/store';
 import { getSiteName, getMatchedEntriesHash } from '@/utils';
 import { useI18n } from '@/i18n';
 import EntryComponent from '@/components/features/accounts/EntryComponent';
+import UndoBar from '@/components/layout/UndoBar';
 
 const AddAccountForm = React.lazy(() => import('@/components/features/accounts/AddAccountForm'));
 const AddMethodSelector = React.lazy(() => import('@/components/features/accounts/AddMethodSelector'));
@@ -57,6 +58,16 @@ export default function MainBody() {
   const [editingEntry, setEditingEntry] = useState<OTPEntryInterface | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [matchedHashes, setMatchedHashes] = useState<string[]>([]);
+
+  // Pending-deletions map: holds entries that have been optimistically
+  // removed from state but not yet committed to storage. Each entry
+  // carries the timer id that will fire the commit if the user does
+  // not click "Undo" in time. Only one pending deletion is tracked at
+  // a time — starting a new deletion cancels the previous undo window
+  // and immediately commits it.
+  const [pendingDeletion, setPendingDeletion] = useState<
+    { entry: OTPEntryInterface; timer: ReturnType<typeof setTimeout> } | null
+  >(null);
 
   useEffect(() => {
     const checkSmartFilter = async () => {
@@ -217,6 +228,81 @@ export default function MainBody() {
     document.querySelectorAll('.entry.dragging').forEach(el => el.classList.remove('dragging'));
   };
 
+  // === Deletion with undo window ===
+  // The user gets a 5-second window to undo an account deletion.
+  // During the window the entry is removed from React state only;
+  // chrome.storage is written only after the window expires or the
+  // next deletion supersedes this one.
+  const UNDO_WINDOW_MS = 5000;
+
+  // Mirror the entries array into a ref so the timer callback can
+  // read the current value without recreating the timer on every
+  // state update.
+  const entriesRef = useRef(entries);
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
+
+  const commitDeletion = useCallback(async (currentEntries: OTPEntryInterface[]) => {
+    try {
+      await chrome.storage.local.set({
+        entries: currentEntries,
+        entriesLastModified: Date.now(),
+      });
+    } catch (err) {
+      debugError('[Auths] Failed to commit deletion:', err);
+    }
+  }, []);
+
+  // Schedule a deletion with the undo window.
+  const handleDeleteWithUndo = useCallback((entry: OTPEntryInterface) => {
+    // If there is already a pending deletion, commit it immediately
+    // rather than letting two undo bars stack up. The state already
+    // reflects the previous removal, so we only need to persist it.
+    if (pendingDeletion) {
+      clearTimeout(pendingDeletion.timer);
+      const remaining = entriesRef.current.filter(e => e.hash !== pendingDeletion.entry.hash);
+      commitDeletion(remaining);
+    }
+
+    // Optimistic state remove. The reducer does NOT save to storage.
+    dispatch({ type: 'deleteCode', payload: entry.hash });
+
+    const timer = setTimeout(() => {
+      // Undo window expired: persist current entries (which already
+      // exclude the just-deleted one).
+      commitDeletion(entriesRef.current.filter(e => e.hash !== entry.hash));
+      setPendingDeletion(null);
+    }, UNDO_WINDOW_MS);
+
+    setPendingDeletion({ entry, timer });
+  }, [pendingDeletion, commitDeletion]);
+
+  // Cancel the pending deletion and re-insert the entry.
+  const handleUndo = useCallback(() => {
+    if (!pendingDeletion) return;
+    clearTimeout(pendingDeletion.timer);
+    dispatch({ type: 'restoreEntry', payload: pendingDeletion.entry });
+    setPendingDeletion(null);
+  }, [pendingDeletion, dispatch]);
+
+  // Called by the UndoBar once its countdown hits zero. The actual
+  // commit already happened in the timer callback above; this just
+  // clears the state so the bar unmounts.
+  const handleUndoExpire = useCallback(() => {
+    setPendingDeletion(null);
+  }, []);
+
+  // Cancel any pending timer when MainBody unmounts (e.g. user closes
+  // the popup while an undo window is still open).
+  useEffect(() => {
+    return () => {
+      if (pendingDeletion) {
+        clearTimeout(pendingDeletion.timer);
+      }
+    };
+  }, [pendingDeletion]);
+
 
 
 
@@ -317,6 +403,7 @@ export default function MainBody() {
               }
               tabindex={getTabindex(entry)}
               onEdit={handleEditEntry}
+              onDelete={handleDeleteWithUndo}
               draggable={style.isEditing}
               onDragStart={(e: React.DragEvent) => handleDragStart(e, entry.hash)}
               onDragEnd={handleDragEnd}
@@ -328,6 +415,16 @@ export default function MainBody() {
           ))
         )}
       </div>
+
+      {/* Undo Bar - bottom-pinned snackbar for the last deletion */}
+      {pendingDeletion && (
+        <UndoBar
+          issuer={pendingDeletion.entry.issuer || ''}
+          durationMs={UNDO_WINDOW_MS}
+          onUndo={handleUndo}
+          onExpire={handleUndoExpire}
+        />
+      )}
 
       {/* Add Account FAB */}
       {!style.isEditing && (

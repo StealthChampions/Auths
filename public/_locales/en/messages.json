@@ -485,6 +485,12 @@
     "site_badge_description": {
         "message": "Show how many accounts match the current site as a badge on the toolbar icon. Requires the \"tabs\" permission."
     },
+    "notifications_enabled": {
+        "message": "Show system notifications"
+    },
+    "notifications_enabled_description": {
+        "message": "Show a desktop notification when an account is added via QR scan. Requires the \"notifications\" permission."
+    },
     "context_menu_description": {
         "message": "Add Authenticator to the browser's context menu"
     },
@@ -652,6 +658,12 @@
     },
     "delete_confirm": {
         "message": "Are you sure you want to delete {name}?"
+    },
+    "undo": {
+        "message": "Undo"
+    },
+    "undo_delete_message": {
+        "message": "Deleted {name}"
     },
     "counter": {
         "message": "Counter"

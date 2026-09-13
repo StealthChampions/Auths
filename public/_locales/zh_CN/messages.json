@@ -477,6 +477,12 @@
   "site_badge_description": {
     "message": "在工具栏图标上以角标显示当前网站匹配到的账户数量。需要授予 \"tabs\" 权限。"
   },
+  "notifications_enabled": {
+    "message": "启用系统通知"
+  },
+  "notifications_enabled_description": {
+    "message": "通过扫码添加账户时显示桌面通知。需要授予 \"notifications\" 权限。"
+  },
   "context_menu_description": {
     "message": "将身份验证器添加到浏览器右键菜单"
   },
@@ -652,6 +658,12 @@
   },
   "delete_confirm": {
     "message": "确定要删除 {name} 吗？"
+  },
+  "undo": {
+    "message": "撤销"
+  },
+  "undo_delete_message": {
+    "message": "已删除 {name}"
   },
   "counter": {
     "message": "计数器"

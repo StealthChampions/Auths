@@ -94,12 +94,21 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   const { dispatch: accountsDispatch } = useAccounts();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [siteBadgeEnabled, setSiteBadgeEnabled] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   useEffect(() => {
     chrome.permissions
       .contains({ permissions: ['tabs'] })
       .then(setSiteBadgeEnabled)
       .catch(() => setSiteBadgeEnabled(false));
+
+    // Notifications permission may already be granted from a prior session
+    // or set via chrome://extensions. Reflect that in the toggle state so
+    // the UI does not lie to the user.
+    chrome.permissions
+      .contains({ permissions: ['notifications'] })
+      .then(setNotificationsEnabled)
+      .catch(() => setNotificationsEnabled(false));
   }, []);
 
   const handleSiteBadgeToggle = async (enabled: boolean) => {
@@ -114,6 +123,34 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
       } else {
         await chrome.permissions.remove({ permissions: ['tabs'] });
         setSiteBadgeEnabled(false);
+      }
+    } catch {
+      notificationDispatch({ type: 'error', payload: t('permission_denied') });
+    }
+  };
+
+  const handleNotificationsToggle = async (enabled: boolean) => {
+    try {
+      if (enabled) {
+        // permissions.request must run inside a user gesture, which is the
+        // case here because this fires from a checkbox onClick.
+        const granted = await chrome.permissions.request({ permissions: ['notifications'] });
+        if (!granted) {
+          notificationDispatch({ type: 'error', payload: t('permission_denied') });
+          return;
+        }
+        setNotificationsEnabled(true);
+        UserSettings.items.notificationsEnabled = true;
+        UserSettings.commitItems();
+      } else {
+        // Removing the permission revokes OS-level notifications. The
+        // background script checks permissions.contains before firing
+        // chrome.notifications.create, so dropping the permission is
+        // enough — we do not need a separate runtime flag.
+        await chrome.permissions.remove({ permissions: ['notifications'] });
+        setNotificationsEnabled(false);
+        UserSettings.items.notificationsEnabled = false;
+        UserSettings.commitItems();
       }
     } catch {
       notificationDispatch({ type: 'error', payload: t('permission_denied') });
@@ -319,6 +356,22 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                   type="checkbox"
                   checked={siteBadgeEnabled}
                   onChange={(e) => handleSiteBadgeToggle(e.target.checked)}
+                />
+              </div>
+
+              <div className="setting-item setting-row setting-toggle-row">
+                <div className="setting-copy">
+                  <SettingLabel
+                    htmlFor="notificationsToggle"
+                    label={t('notifications_enabled')}
+                    description={t('notifications_enabled_description')}
+                  />
+                </div>
+                <input
+                  id="notificationsToggle"
+                  type="checkbox"
+                  checked={notificationsEnabled}
+                  onChange={(e) => handleNotificationsToggle(e.target.checked)}
                 />
               </div>
 

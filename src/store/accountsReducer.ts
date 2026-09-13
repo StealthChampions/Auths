@@ -34,6 +34,7 @@ export type AccountsAction =
   | { type: 'initComplete' }
   | { type: 'pinEntry'; payload: string }
   | { type: 'deleteCode'; payload: string }
+  | { type: 'restoreEntry'; payload: OTPEntryInterface }
   | { type: 'addCode'; payload: NewAccountEntry }
   | { type: 'updateEntry'; payload: { hash: string; issuer?: string; account?: string; folder?: string; period?: number; digits?: number; icon?: string } }
   | { type: 'moveEntryUp'; payload: string }
@@ -101,12 +102,28 @@ export function accountsReducer(state = initialState, action: AccountsAction): A
       };
 
     case 'deleteCode':
+      // Optimistic remove from state. The popup keeps the entry in a
+      // pending-deletions map and either commits the deletion after the
+      // undo window expires, or restores it via 'restoreEntry'. This is
+      // why we do NOT save to storage here — saving now would lose the
+      // entry even if the user clicks "Undo".
       const filteredEntries = state.entries.filter(entry => entry.hash !== action.payload);
-      // 保存到 storage
-      saveEntriesToStorage(filteredEntries);
       return {
         ...state,
         entries: filteredEntries
+      };
+
+    case 'restoreEntry':
+      // Re-insert a previously removed entry. If it already exists (e.g.
+      // a parallel add happened) we keep the original entry unchanged.
+      if (state.entries.some(entry => entry.hash === action.payload.hash)) {
+        return state;
+      }
+      const restoredEntries = [...state.entries, action.payload];
+      saveEntriesToStorage(restoredEntries);
+      return {
+        ...state,
+        entries: restoredEntries
       };
 
     case 'addCode':
