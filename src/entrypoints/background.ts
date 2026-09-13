@@ -54,7 +54,7 @@ export default defineBackground(() => {
       }
       return lang;
     } catch {
-      return 'zh_CN'; // Default to Chinese | 默认中文
+      return 'en'; // Default to English | 默认英文
     }
   }
 
@@ -205,16 +205,6 @@ export default defineBackground(() => {
       }
     });
   }
-
-  // Handle commands
-  // 处理快捷键命令
-  chrome.commands.onCommand.addListener((command: string) => {
-    if (command === 'scan-qr') {
-      // Handle QR scan command | 处理扫描二维码命令
-    } else if (command === 'autofill') {
-      // Handle autofill command | 处理自动填充命令
-    }
-  });
 
   // ==== Site-match badge ====
   // 当切换/加载标签页时，统计已存储账户中能匹配当前网址的数量并显示为角标

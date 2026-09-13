@@ -14,9 +14,20 @@ import jsQR from 'jsqr';
 import { debugLog } from '@/utils/logger';
 
 export default defineContentScript({
+  // Injected on demand via chrome.scripting.executeScript from the popup
+  // (see AddMethodSelector.handleRegionSelect). Runtime registration keeps the
+  // script out of the manifest's content_scripts, so nothing is injected into
+  // pages until the user actually triggers QR scanning.
+  // 通过 popup 的 chrome.scripting.executeScript 按需注入，不写入 manifest，
+  // 用户触发二维码扫描前不会向任何页面注入脚本。
   matches: ['<all_urls>'],
-  runAt: 'document_idle',
+  registration: 'runtime',
   main() {
+    // Guard against duplicate injection (e.g. repeated executeScript calls)
+    // 防止重复注入（如多次调用 executeScript）
+    const w = window as typeof window & { __authsRegionSelectorInjected?: boolean };
+    if (w.__authsRegionSelectorInjected) return;
+    w.__authsRegionSelectorInjected = true;
     // Listen for messages from the extension
     // 监听来自扩展的消息
     chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
