@@ -184,12 +184,17 @@ We may update this Privacy Policy from time to time. Changes will be posted to t
 ## Contact | 联系方式
 
 **English:**
-If you have any questions about this Privacy Policy, please:
+If you have any questions, suggestions, or feedback about this Privacy Policy
+or the Auths extension, please reach out:
+
 - Open an issue on [GitHub](https://github.com/StealthChampions/Auths/issues)
+- Email: [stealthchampions@gmail.com](mailto:stealthchampions@gmail.com)
 
 **中文：**
-如果您对本隐私政策有任何疑问，请：
+如果您对本隐私政策或 Auths 扩展有任何问题、建议或反馈，请通过以下方式联系我们：
+
 - 在 [GitHub](https://github.com/StealthChampions/Auths/issues) 上提交 Issue
+- 邮箱：[stealthchampions@gmail.com](mailto:stealthchampions@gmail.com)
 
 ---
 
