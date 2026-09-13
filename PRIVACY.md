@@ -1,6 +1,6 @@
 # Privacy Policy | 隐私政策
 
-**Last Updated | 最后更新:** June 21, 2026
+**Last Updated | 最后更新:** September 13, 2026 (v1.0.5)
 
 ---
 
@@ -96,27 +96,33 @@ If you choose to enable WebDAV backup:
 
 | Permission | Type | Purpose |
 |------------|------|---------|
-| `activeTab` | Required | Detect current website URL for Smart Filter feature |
+| `activeTab` | Required | Detect current website URL for Smart Filter feature and on-demand QR scan injection |
 | `storage` | Required | Store your account data locally |
-| `scripting` | Required | Inject QR scanner script for screen capture |
+| `scripting` | Required | Inject QR scanner script on demand into the current tab when you start a scan |
 | `clipboardWrite` | Required | Copy verification codes to clipboard |
 | `tabs` | Optional | Read active tab URL/title to count matching accounts as a toolbar badge (only when "Show match count on icon" is enabled) |
 | `alarms` | Optional | Schedule auto-backup (only when enabled) |
 | `notifications` | Optional | Backup completion feedback |
 | `host_permissions` | Optional | WebDAV server access (per-server, only when configured) |
 
+**How Smart Filter reads the current site without broad permissions:**
+Auths uses the `activeTab` permission to read the URL of the tab you opened when you click the extension icon. This is a "just-in-time" grant: the extension can read the current tab only at the moment of your click, and only while the popup is open. The extension does **not** have a pre-installed blanket permission to read or modify any website. If you want to see matching accounts without clicking the icon (displayed as a badge on the toolbar icon), you can opt in to the optional `tabs` permission — this is disabled by default.
+
 **中文：**
 
 | 权限 | 类型 | 用途 |
 |------|------|------|
-| `activeTab` | 必需 | 检测当前网站 URL 用于智能过滤功能 |
+| `activeTab` | 必需 | 检测当前网站 URL 用于智能过滤功能，并在您启动扫描时按需注入二维码脚本 |
 | `storage` | 必需 | 本地存储账户数据 |
-| `scripting` | 必需 | 注入二维码扫描脚本用于屏幕截取 |
+| `scripting` | 必需 | 仅在您开始扫描时将二维码扫描脚本注入当前标签页 |
 | `clipboardWrite` | 必需 | 复制验证码到剪贴板 |
 | `tabs` | 可选 | 读取当前标签页的 URL 与标题，以在工具栏图标上显示匹配账户数量（仅在开启"图标显示匹配数量"时） |
 | `alarms` | 可选 | 调度自动备份（仅在启用时） |
 | `notifications` | 可选 | 备份完成反馈通知 |
 | `host_permissions` | 可选 | WebDAV 服务器访问（按服务器，仅在配置时） |
+
+**智能过滤如何在不申请宽权限的前提下读取当前网站：**
+Auths 使用 `activeTab` 权限读取您点击扩展图标时所打开标签页的 URL。这是一种"即时"授权：仅在您点击的那一瞬间、且仅在 popup 打开期间，扩展才能读取当前标签页。扩展**并未**预装读取或修改任何网站的宽泛权限。如果您希望在工具栏图标上直接看到匹配账户数量（无需打开 popup），可以手动启用可选的 `tabs` 权限——该权限默认未开启。
 
 ---
 
@@ -205,3 +211,23 @@ Auths stores sensitive data locally, collects nothing, and does not operate any 
 
 **中文：**
 Auths 会将敏感数据保存在本地，不收集任何信息，也不会为您的数据运营后端服务器。
+
+---
+
+## v1.0.5 Permission Tightening Summary | v1.0.5 权限收紧说明
+
+**English:**
+Starting with v1.0.5 the extension manifest declares **zero blanket host permissions**. Previously the QR scanner was injected as a static content script across `<all_urls>`; it is now injected on demand via `chrome.scripting.executeScript` under the `activeTab` permission. The install-time permission prompt now reads only "Read your active tab's data when you click the extension" instead of "Read and change all your data on all websites".
+
+Functionality is unchanged:
+- **Smart Filter** still matches accounts to the current site — it reads `tab.url` from the popup context where `activeTab` is already granted by your click.
+- **QR code scanner** still lets you capture a region from any tab — the popup injects the scanner script into the current tab only after you click the scan button.
+- **Site-match toolbar badge** continues to use the optional `tabs` permission (off by default), since it runs in the background where `activeTab` is not granted.
+
+**中文：**
+从 v1.0.5 起，扩展 manifest 声明的**持续性主机权限数量为零**。此前二维码扫描器作为静态 content script 常驻注入到 `<all_urls>`，现在改为通过 `chrome.scripting.executeScript` 在 `activeTab` 权限下按需注入。安装时的权限提示文案由"读取并修改你在所有网站上的数据"变为"读取你当前标签页的内容（当你点击扩展时）"。
+
+功能未发生变化：
+- **智能过滤**仍能匹配当前网站的账户 —— 它在 popup 上下文中读取 `tab.url`，而 popup 上下文里 `activeTab` 在您点击时已被自动授权。
+- **二维码扫描**仍能捕获任意标签页中的二维码区域 —— popup 仅在您点击"扫描"按钮后才把扫描脚本注入当前标签页。
+- **工具栏角标（匹配账户数量）**继续使用可选的 `tabs` 权限（默认关闭），因为它跑在 background 里、没有 `activeTab` 的即时授权。
