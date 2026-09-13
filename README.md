@@ -13,11 +13,11 @@
 ## ✨ Features
 
 - **Modern UI**: Clean design with dark mode support and smooth transitions.
-- **Secure Storage**: Data stays local. When app encryption is enabled, secrets use **AES-256-CBC with PBKDF2-SHA256**; password-protected backup exports use **AES-256-GCM with PBKDF2-SHA256**.
-- **Organized**: Group accounts into folders with custom icons. The **Smart Filter** shows relevant accounts for the current website.
-- **Brand Icons**: Automatically matches icons for popular services.
+- **Local Storage**: Data never leaves your browser. Optional password-protected backup exports are encrypted with **AES-256-GCM + PBKDF2-SHA256**.
+- **Organized**: Pin, drag-to-reorder and search accounts. The **Smart Filter** shows relevant accounts for the current website.
+- **Service Icons**: Shows icons for known services (fetched from Google's favicon service based on the issuer name).
 - **Real-time TOTP**: Accurate code generation with progress indicators.
-- **Cloud Sync (Optional)**: Backup and sync your encrypted vault via **WebDAV**.
+- **WebDAV Backup (Optional)**: Backup and sync accounts to your own WebDAV server (HTTPS required; uploads contain your account data, stored on your server only).
 - **QR Code Scanner**: Scan QR codes directly from webpages to add accounts.
 
 ---
@@ -72,7 +72,8 @@
 ## 🔒 Security
 
 We take security seriously. 
-- **Local Encryption**: App encryption uses PBKDF2-SHA256 for key derivation and AES for encryption. New password-protected backup exports use AES-GCM; older AES-CBC backup exports remain importable.
+- **Local-only Data**: Accounts are stored in your browser's local storage and never leave your device unless you explicitly enable WebDAV backup or export a backup file.
+- **Encrypted Exports**: Optional password-protected backup exports are encrypted in-browser with AES-256-GCM (PBKDF2-SHA256 key derivation); older AES-CBC exports remain importable.
 - **No Tracking**: We do not collect any personal data or usage analytics.
 - **Vulnerability Reporting**: Please refer to our [Security Policy](SECURITY.md) for reporting vulnerabilities.
 

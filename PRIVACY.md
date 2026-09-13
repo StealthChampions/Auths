@@ -26,6 +26,8 @@ Auths does not:
 - Store data on our own external servers
 - Share any information with third parties
 
+**One technical note on service icons**: to display an icon for an account, the extension derives a domain from the account's issuer name (e.g., "GitHub") and requests that domain's icon from Google's public favicon service (`www.google.com/s2/favicons`). Only the icon domain is sent — never your account names, usernames, or secrets. If no domain can be derived, a letter placeholder is shown and no request is made.
+
 **中文：**
 **我们不收集任何个人数据。**
 
@@ -35,6 +37,8 @@ Auths 不会：
 - 使用分析或遥测服务
 - 在我们自己的外部服务器上存储数据
 - 与第三方共享任何信息
+
+**关于服务图标的技术说明**：为在账户旁显示图标，扩展会从账户的 issuer 名称推导出域名（如 "GitHub"），并向 Google 的公共 favicon 服务（`www.google.com/s2/favicons`）请求该域名的图标。请求中仅包含图标域名——绝不包含您的账户名、用户名或密钥。若无法推导出域名，则显示字母占位图标，不发起任何请求。
 
 ---
 
@@ -67,7 +71,7 @@ Sensitive data is stored **locally** on your device:
 **English:**
 If you choose to enable WebDAV backup:
 
-- Your data is uploaded to **your own** WebDAV server
+- Your account data is uploaded to **your own** WebDAV server. The backup file is a JSON document that contains your account entries **in readable form** — it is **not** application-encrypted end-to-end; confidentiality relies on HTTPS transport and the security of your server. If you need at-rest encryption, export a password-protected encrypted backup file locally instead.
 - We do not have access to your WebDAV credentials or data
 - You are responsible for the security of your WebDAV server
 - Host permissions are requested **per-server** only when you configure backup
@@ -77,7 +81,7 @@ If you choose to enable WebDAV backup:
 **中文：**
 如果您选择启用 WebDAV 备份：
 
-- 您的数据将上传到**您自己的** WebDAV 服务器
+- 您的账户数据将上传到**您自己的** WebDAV 服务器。备份文件是包含账户条目的 JSON 文档，内容为**可读形式**——**并未**进行应用层端到端加密；其保密性依赖 HTTPS 传输与您服务器的安全性。如需静态加密，请改用本地导出带密码的加密备份文件。
 - 我们无法访问您的 WebDAV 凭据或数据
 - 您需要自行负责 WebDAV 服务器的安全
 - 仅在您配置备份时**按服务器**请求主机权限
