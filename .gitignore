@@ -75,3 +75,6 @@ PROJECT_PLAN_zh.md
 
 # Store listing materials (screenshots, descriptions)
 /marketing/
+
+# WorkBuddy workspace memory (local-only)
+/.workbuddy/
