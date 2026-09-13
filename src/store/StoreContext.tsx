@@ -13,7 +13,6 @@ import { accountsReducer, AccountsState, AccountsAction } from './accountsReduce
 import { styleReducer, StyleState, StyleAction } from './styleReducer';
 import { menuReducer, MenuState, MenuAction } from './menuReducer';
 import { notificationReducer, NotificationState, NotificationAction } from './notificationReducer';
-import { backupReducer, BackupState, BackupAction } from './backupReducer';
 
 // Define the shape of our global state | 定义全局状态结构
 interface GlobalState {
@@ -21,15 +20,13 @@ interface GlobalState {
   style: StyleState;
   menu: MenuState;
   notification: NotificationState;
-  backup: BackupState;
 }
 
 type StoreAction =
   | { type: 'accounts'; payload: AccountsAction }
   | { type: 'style'; payload: StyleAction }
   | { type: 'menu'; payload: MenuAction }
-  | { type: 'notification'; payload: NotificationAction }
-  | { type: 'backup'; payload: BackupAction };
+  | { type: 'notification'; payload: NotificationAction };
 
 // Create the context | 创建 Context
 const StoreContext = createContext<{
@@ -49,12 +46,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return { ...state, menu: menuReducer(state.menu, action.payload) };
       case 'notification':
         return { ...state, notification: notificationReducer(state.notification, action.payload) };
-
-      case 'backup':
-        return { ...state, backup: backupReducer(state.backup, action.payload) };
-
-
-
       default:
         return state;
     }
@@ -63,11 +54,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     style: styleReducer(undefined, { type: 'init' }),
     menu: menuReducer(undefined, { type: 'init' }),
     notification: notificationReducer(undefined, { type: 'init' }),
-
-    backup: backupReducer(undefined, { type: 'init' }),
-
-
-
   });
 
   return (
@@ -118,16 +104,3 @@ export function useNotification() {
     dispatch: (action: NotificationAction) => dispatch({ type: 'notification', payload: action })
   };
 }
-
-
-
-export function useBackup() {
-  const { state, dispatch } = useStore();
-  return {
-    backup: state.backup,
-    dispatch: (action: BackupAction) => dispatch({ type: 'backup', payload: action })
-  };
-}
-
-
-

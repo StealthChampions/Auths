@@ -18,8 +18,5 @@ export type { MenuState, MenuAction } from './menuReducer';
 export { notificationReducer } from './notificationReducer';
 export type { NotificationState, NotificationAction } from './notificationReducer';
 
-export { backupReducer } from './backupReducer';
-export type { BackupState, BackupAction } from './backupReducer';
-
 // Export the store context and hooks | 导出 store context 和 hooks
-export { StoreProvider, useStore, useAccounts, useStyle, useMenu, useNotification, useBackup } from './StoreContext';
+export { StoreProvider, useStore, useAccounts, useStyle, useMenu, useNotification } from './StoreContext';

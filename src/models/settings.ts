@@ -16,15 +16,11 @@ export enum StorageLocation {
 
 interface UserSettingsData {
   // Local settings | 本地设置
-  lastRemindingBackupTime?: number;
   offset?: number;
   storageLocation?: StorageLocation;
-  webdavConfigured?: boolean;
 
   // Syncable settings | 可同步设置
-  autolock?: number;
   clipboardClearSeconds?: number;
-  encodedPhrase?: string;
   smartFilter?: boolean;
   theme?: string;
   themeColor?: string;
@@ -33,10 +29,8 @@ interface UserSettingsData {
 
 // Local-only settings keys | 仅本地设置的键名
 const LocalUserSettingsDataKeys = [
-  "lastRemindingBackupTime",
   "offset",
   "storageLocation",
-  "webdavConfigured",
 ];
 
 export class UserSettings {
@@ -160,14 +154,14 @@ export class UserSettings {
   }
 }
 
-type BooleanOption = "smartFilter" | "webdavConfigured";
+type BooleanOption = "smartFilter";
 
-type NumberOption = "autolock" | "clipboardClearSeconds" | "lastRemindingBackupTime" | "offset";
+type NumberOption = "clipboardClearSeconds" | "offset";
 
 function isBooleanOption(key: string): key is BooleanOption {
-  return ["smartFilter", "webdavConfigured"].includes(key);
+  return ["smartFilter"].includes(key);
 }
 
 function isNumberOption(key: string): key is NumberOption {
-  return ["autolock", "clipboardClearSeconds", "lastRemindingBackupTime", "offset"].includes(key);
+  return ["clipboardClearSeconds", "offset"].includes(key);
 }

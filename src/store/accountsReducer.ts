@@ -11,9 +11,6 @@ export interface AccountsState {
   entries: OTPEntryInterface[];
   filter: string;
   showSearch: boolean;
-  shouldShowPassphrase: boolean;
-  defaultEncryption?: string;
-  encryption: EncryptionInterface | null;
   initComplete: boolean;
 }
 
@@ -35,9 +32,6 @@ export type AccountsAction =
   | { type: 'hideSearch' }
   | { type: 'stopFilter' }
   | { type: 'initComplete' }
-  | { type: 'setShouldShowPassphrase'; payload: boolean }
-  | { type: 'setDefaultEncryption'; payload: string }
-  | { type: 'setEncryption'; payload: EncryptionInterface | null }
   | { type: 'pinEntry'; payload: string }
   | { type: 'deleteCode'; payload: string }
   | { type: 'addCode'; payload: NewAccountEntry }
@@ -50,9 +44,7 @@ const initialState: AccountsState = {
   entries: [],
   filter: '',
   showSearch: false,
-  shouldShowPassphrase: false,
   initComplete: false,
-  encryption: null,
 };
 
 export function accountsReducer(state = initialState, action: AccountsAction): AccountsState {
@@ -94,24 +86,6 @@ export function accountsReducer(state = initialState, action: AccountsAction): A
       return {
         ...state,
         initComplete: true
-      };
-
-    case 'setShouldShowPassphrase':
-      return {
-        ...state,
-        shouldShowPassphrase: action.payload
-      };
-
-    case 'setDefaultEncryption':
-      return {
-        ...state,
-        defaultEncryption: action.payload
-      };
-
-    case 'setEncryption':
-      return {
-        ...state,
-        encryption: action.payload
       };
 
     case 'pinEntry':

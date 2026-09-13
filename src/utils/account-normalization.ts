@@ -139,13 +139,9 @@ export function normalizeAccount(value: unknown): OTPEntryInterface | null {
 
   const initialType = normalizeType(value.type);
   const normalizedSecret = normalizeSecretValue(value.secret, initialType);
-  const encData = normalizeOptionalText(value.encData, MAX_ICON_LENGTH * 4);
-  const encSecret = normalizeOptionalText(value.encSecret, MAX_ICON_LENGTH * 4);
-  const keyId = normalizeOptionalText(value.keyId, 128);
 
-  if (!normalizedSecret && !encData && !encSecret) return null;
+  if (!normalizedSecret) return null;
 
-  const type = normalizedSecret?.type ?? initialType;
   const account: OTPEntryInterface = {
     hash: normalizeHash(value.hash),
     issuer: normalizeText(value.issuer),
@@ -153,25 +149,18 @@ export function normalizeAccount(value: unknown): OTPEntryInterface | null {
     code: normalizeText(value.code, 32),
     period: normalizeInteger(value.period, 30, 1, 300),
     pinned: normalizeBoolean(value.pinned),
-    type,
+    type: normalizedSecret.type,
     counter: normalizeInteger(value.counter, 0, 0, Number.MAX_SAFE_INTEGER),
     digits: normalizeInteger(value.digits, 6, 4, 10),
-    secret: normalizedSecret?.secret ?? null,
+    secret: normalizedSecret.secret,
     algorithm: normalizeAlgorithm(value.algorithm),
   };
-
-  const index = normalizeInteger(value.index, -1, 0, Number.MAX_SAFE_INTEGER);
-  if (index >= 0) account.index = index;
 
   const icon = normalizeIcon(value.icon);
   if (icon) account.icon = icon;
 
   const folder = normalizeOptionalText(value.folder);
   if (folder) account.folder = folder;
-
-  if (encData) account.encData = encData;
-  if (encSecret) account.encSecret = encSecret;
-  if (keyId) account.keyId = keyId;
 
   return account;
 }

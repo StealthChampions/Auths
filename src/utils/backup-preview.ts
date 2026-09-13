@@ -24,9 +24,6 @@ const COMPARED_ACCOUNT_FIELDS: Array<keyof OTPEntryInterface> = [
   'pinned',
   'icon',
   'folder',
-  'encData',
-  'encSecret',
-  'keyId',
 ];
 
 function comparableValue(account: OTPEntryInterface, field: keyof OTPEntryInterface) {
