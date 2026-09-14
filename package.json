@@ -1,6 +1,6 @@
 {
   "name": "auths",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Auths generates 2-Step Verification codes in your browser.",
   "scripts": {
     "dev": "wxt",
